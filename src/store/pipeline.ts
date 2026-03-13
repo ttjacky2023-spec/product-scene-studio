@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { AuditRow, IntakeData, Locale, QaScore } from "@/lib/types";
+import type { ImageAnalysis } from "@/lib/analyze";
 
 const defaultIntake: IntakeData = {
   imageName: "",
@@ -46,10 +47,12 @@ const defaultQa: QaScore[] = [
 
 type PipelineState = {
   locale: Locale;
+  analysis: ImageAnalysis | null;
   intake: IntakeData;
   audit: AuditRow[];
   qa: QaScore[];
   setLocale: (locale: Locale) => void;
+  setAnalysis: (analysis: ImageAnalysis | null) => void;
   setIntake: (data: IntakeData) => void;
   setAuditCell: (index: number, field: keyof AuditRow, value: string) => void;
   setQaCell: (index: number, field: keyof QaScore, value: string) => void;
@@ -60,24 +63,19 @@ export const usePipelineStore = create<PipelineState>()(
   persist(
     (set) => ({
       locale: "en",
+      analysis: null,
       intake: defaultIntake,
       audit: defaultAudit,
       qa: defaultQa,
       setLocale: (locale) => set({ locale }),
+      setAnalysis: (analysis) => set({ analysis }),
       setIntake: (data) => set({ intake: data }),
       setAuditCell: (index, field, value) =>
-        set((state) => ({
-          audit: state.audit.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
-        })),
+        set((state) => ({ audit: state.audit.map((row, i) => (i === index ? { ...row, [field]: value } : row)) })),
       setQaCell: (index, field, value) =>
-        set((state) => ({
-          qa: state.qa.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
-        })),
-      resetAll: () => set({ locale: "en", intake: defaultIntake, audit: defaultAudit, qa: defaultQa }),
+        set((state) => ({ qa: state.qa.map((row, i) => (i === index ? { ...row, [field]: value } : row)) })),
+      resetAll: () => set({ locale: "en", analysis: null, intake: defaultIntake, audit: defaultAudit, qa: defaultQa }),
     }),
-    {
-      name: "product-scene-studio-pipeline",
-      storage: createJSONStorage(() => localStorage),
-    },
+    { name: "product-scene-studio-pipeline", storage: createJSONStorage(() => localStorage) },
   ),
 );

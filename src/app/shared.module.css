@@ -1,66 +1,15 @@
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.header h1 {
-  font-size: 42px;
-  letter-spacing: -0.04em;
-}
-.header p {
-  color: #475569;
-  line-height: 1.7;
-}
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-.formGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
-  gap: 16px;
-}
-.card {
-  border: 1px solid #dbe4ff;
-  background: rgba(255,255,255,0.9);
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 18px 60px rgba(37,99,235,0.08);
-}
-.card h2 {
-  margin-bottom: 16px;
-  font-size: 22px;
-}
-.list {
-  padding-left: 18px;
-  color: #334155;
-  line-height: 1.8;
-}
-.tableWrap {
-  overflow-x: auto;
-}
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.table th,
-.table td {
-  text-align: left;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 12px 10px;
-  vertical-align: top;
-}
-.table th {
-  color: #475569;
-  font-size: 14px;
-}
-@media (max-width: 900px) {
-  .grid, .formGrid { grid-template-columns: 1fr; }
-  .header h1 { font-size: 34px; }
-}
+.page { display:flex; flex-direction:column; gap:20px; }
+.header { display:flex; flex-direction:column; gap:10px; }
+.header h1 { font-size:42px; letter-spacing:-0.04em; }
+.header p { color:#475569; line-height:1.7; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.formGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.card { border:1px solid #dbe4ff; background:rgba(255,255,255,0.92); border-radius:24px; padding:24px; box-shadow:0 18px 60px rgba(37,99,235,0.08); }
+.card h2 { margin-bottom:16px; font-size:22px; }
+.list { padding-left:18px; color:#334155; line-height:1.8; }
+.tableWrap { overflow-x:auto; }
+.table { width:100%; border-collapse:collapse; }
+.table th,.table td { text-align:left; border-bottom:1px solid #e2e8f0; padding:12px 10px; vertical-align:top; }
+.table th { color:#475569; font-size:14px; }
+.tip { margin-top:8px; color:#64748b; font-size:13px; line-height:1.6; }
+@media (max-width:900px){ .grid,.formGrid { grid-template-columns:1fr; } .header h1 { font-size:34px; } }

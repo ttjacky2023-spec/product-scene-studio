@@ -11,6 +11,8 @@ export type ImageAnalysis = {
   suggestedStyle: string;
   suggestedAngleTolerance: "same angle only" | "slight angle shift";
   notes: string[];
+  structureHint: string;
+  styleHint: string;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -36,7 +38,6 @@ export async function analyzeImageDataUrl(dataUrl: string): Promise<ImageAnalysi
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
   const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
   const corners = [
     [0, 0],
     [width - 1, 0],
@@ -56,52 +57,55 @@ export async function analyzeImageDataUrl(dataUrl: string): Promise<ImageAnalysi
   const backgroundTone = bgBrightness > 205 ? "light" : bgBrightness < 70 ? "dark" : "mixed";
 
   const threshold = 34;
-  let minX = width, minY = height, maxX = 0, maxY = 0, foregroundCount = 0;
+  let foregroundCount = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = (y * width + x) * 4;
       const dr = Math.abs(data[idx] - bg.r);
       const dg = Math.abs(data[idx + 1] - bg.g);
       const db = Math.abs(data[idx + 2] - bg.b);
-      if (dr + dg + db > threshold) {
-        foregroundCount++;
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-      }
+      if (dr + dg + db > threshold) foregroundCount++;
     }
   }
 
-  const estimatedCoverage = foregroundCount
-    ? clamp(Math.round((foregroundCount / (width * height)) * 100), 1, 99)
-    : 0;
+  const estimatedCoverage = foregroundCount ? clamp(Math.round((foregroundCount / (width * height)) * 100), 1, 99) : 0;
+  const orientation: ImageAnalysis["orientation"] = img.width === img.height ? "square" : img.width > img.height ? "landscape" : "portrait";
 
-  const orientation: ImageAnalysis["orientation"] =
-    img.width === img.height ? "square" : img.width > img.height ? "landscape" : "portrait";
+  const suggestedAspectRatios = orientation === "square"
+    ? ["1:1", "4:5", "3:4", "2:3", "16:9"]
+    : orientation === "portrait"
+      ? ["4:5", "3:4", "2:3", "1:1", "9:16"]
+      : ["16:9", "3:2", "4:5", "1:1", "21:9"];
 
-  const suggestedAspectRatios =
-    orientation === "square" ? ["1:1", "4:5", "3:4"] :
-    orientation === "portrait" ? ["4:5", "3:4", "1:1"] : ["16:9", "4:5", "1:1"];
+  const suggestedOutputSizes = orientation === "square"
+    ? ["2000 x 2000", "1600 x 1600", "2500 x 2500", "3000 x 3000"]
+    : orientation === "portrait"
+      ? ["2000 x 2500", "1800 x 2400", "1500 x 2000", "1080 x 1350"]
+      : ["1920 x 1080", "2400 x 1350", "1600 x 900", "2560 x 1440"];
 
-  const suggestedOutputSizes =
-    orientation === "square" ? ["2000 x 2000", "1600 x 1600", "2500 x 2500"] :
-    orientation === "portrait" ? ["2000 x 2500", "1800 x 2400", "1500 x 2000"] : ["1920 x 1080", "2400 x 1350", "1600 x 900"];
+  const suggestedIntendedUses = orientation === "landscape"
+    ? ["Ads", "Landing page hero", "Social", "A+ / PDP"]
+    : ["Amazon gallery", "A+ / PDP", "Social", "Marketplace listing", "Ads"];
 
-  const suggestedIntendedUses =
-    orientation === "landscape" ? ["Ads", "Social", "A+ / PDP"] : ["Amazon gallery", "A+ / PDP", "Social"];
+  const suggestedSceneTypes = backgroundTone === "light"
+    ? ["minimal tabletop", "soft lifestyle setup", "bright studio scene", "clean shelf scene"]
+    : ["premium dark studio", "high-contrast product setup", "dramatic shelf scene", "moody lifestyle setup"];
 
-  const suggestedSceneTypes =
-    backgroundTone === "light"
-      ? ["minimal tabletop", "soft lifestyle setup", "bright studio scene"]
-      : ["premium dark studio", "high-contrast product setup", "dramatic shelf scene"];
-
-  const suggestedStyle =
-    backgroundTone === "light"
-      ? "clean ecommerce lifestyle with bright controllable lighting"
-      : "premium contrast-forward studio scene with controlled highlights";
+  const suggestedStyle = backgroundTone === "light"
+    ? "clean ecommerce lifestyle with bright controllable lighting"
+    : "premium contrast-forward studio scene with controlled highlights";
 
   const suggestedAngleTolerance = estimatedCoverage > 55 ? "slight angle shift" : "same angle only";
+  const structureHint = orientation === "square"
+    ? "Centered front-facing packshot structure with balanced margins."
+    : orientation === "portrait"
+      ? "Vertical composition with product prominence and stronger top-bottom layout rhythm."
+      : "Wide composition with room for context, props, or copy space.";
+  const styleHint = backgroundTone === "light"
+    ? "Light-background reference suggests clean commerce or airy lifestyle styling."
+    : backgroundTone === "dark"
+      ? "Dark-background reference suggests premium, contrast-led visual treatment."
+      : "Mixed-background reference suggests blended lifestyle context and more manual control.";
 
   const notes = [
     `Detected ${img.width}×${img.height} ${orientation} image.`,
@@ -116,18 +120,5 @@ export async function analyzeImageDataUrl(dataUrl: string): Promise<ImageAnalysi
       : "Product occupies enough area for stronger extraction or slight-angle workflows.",
   ];
 
-  return {
-    width: img.width,
-    height: img.height,
-    orientation,
-    estimatedCoverage,
-    backgroundTone,
-    suggestedAspectRatios,
-    suggestedOutputSizes,
-    suggestedIntendedUses,
-    suggestedSceneTypes,
-    suggestedStyle,
-    suggestedAngleTolerance,
-    notes,
-  };
+  return { width: img.width, height: img.height, orientation, estimatedCoverage, backgroundTone, suggestedAspectRatios, suggestedOutputSizes, suggestedIntendedUses, suggestedSceneTypes, suggestedStyle, suggestedAngleTolerance, notes, structureHint, styleHint };
 }

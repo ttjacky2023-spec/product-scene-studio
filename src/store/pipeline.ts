@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { AuditRow, IntakeData, Locale, QaScore } from "@/lib/types";
+import type { AuditRow, ImageAsset, IntakeData, Locale, QaScore } from "@/lib/types";
 import type { ImageAnalysis } from "@/lib/analyze";
 
 const defaultIntake: IntakeData = {
@@ -12,17 +12,28 @@ const defaultIntake: IntakeData = {
   productCoverage: "",
   availableViews: "front only",
   aspectRatio: "1:1",
+  aspectRatioCustom: "",
   outputSize: "2000 x 2000",
+  outputSizeCustom: "",
   generationCount: "4",
   intendedUse: "Amazon gallery",
   sceneTypes: "",
-  placementPreference: "",
+  placementPreference: "centered",
+  placementCustom: "",
   angleTolerance: "same angle only",
+  angleDegrees: "0-10",
   stylePreference: "",
+  styleCustom: "",
   strictness: "maximum preservation",
   mustPreserve: "logo, critical text, icons",
   draftApproval: "yes",
   maxIterations: "3",
+  productFrameCoverageTarget: "55",
+  useReferenceImage: false,
+  referenceImageName: "",
+  referenceImageDataUrl: "",
+  referenceAnalysisModel: "gemini-3-flash-preview",
+  sourceImages: [],
 };
 
 const defaultAudit: AuditRow[] = [
@@ -48,12 +59,15 @@ const defaultQa: QaScore[] = [
 type PipelineState = {
   locale: Locale;
   analysis: ImageAnalysis | null;
+  referenceAnalysis: ImageAnalysis | null;
   intake: IntakeData;
   audit: AuditRow[];
   qa: QaScore[];
   setLocale: (locale: Locale) => void;
   setAnalysis: (analysis: ImageAnalysis | null) => void;
+  setReferenceAnalysis: (analysis: ImageAnalysis | null) => void;
   setIntake: (data: IntakeData) => void;
+  addSourceImages: (items: ImageAsset[]) => void;
   setAuditCell: (index: number, field: keyof AuditRow, value: string) => void;
   setQaCell: (index: number, field: keyof QaScore, value: string) => void;
   resetAll: () => void;
@@ -64,17 +78,18 @@ export const usePipelineStore = create<PipelineState>()(
     (set) => ({
       locale: "en",
       analysis: null,
+      referenceAnalysis: null,
       intake: defaultIntake,
       audit: defaultAudit,
       qa: defaultQa,
       setLocale: (locale) => set({ locale }),
       setAnalysis: (analysis) => set({ analysis }),
+      setReferenceAnalysis: (analysis) => set({ referenceAnalysis: analysis }),
       setIntake: (data) => set({ intake: data }),
-      setAuditCell: (index, field, value) =>
-        set((state) => ({ audit: state.audit.map((row, i) => (i === index ? { ...row, [field]: value } : row)) })),
-      setQaCell: (index, field, value) =>
-        set((state) => ({ qa: state.qa.map((row, i) => (i === index ? { ...row, [field]: value } : row)) })),
-      resetAll: () => set({ locale: "en", analysis: null, intake: defaultIntake, audit: defaultAudit, qa: defaultQa }),
+      addSourceImages: (items) => set((state) => ({ intake: { ...state.intake, sourceImages: items.slice(0, 4) } })),
+      setAuditCell: (index, field, value) => set((state) => ({ audit: state.audit.map((row, i) => (i === index ? { ...row, [field]: value } : row)) })),
+      setQaCell: (index, field, value) => set((state) => ({ qa: state.qa.map((row, i) => (i === index ? { ...row, [field]: value } : row)) })),
+      resetAll: () => set({ locale: "en", analysis: null, referenceAnalysis: null, intake: defaultIntake, audit: defaultAudit, qa: defaultQa }),
     }),
     { name: "product-scene-studio-pipeline", storage: createJSONStorage(() => localStorage) },
   ),

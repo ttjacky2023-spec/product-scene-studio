@@ -1,63 +1,47 @@
-import styles from "../shared.module.css";
+"use client";
 
-const scores = [
-  ["Silhouette fidelity", "4"],
-  ["Logo fidelity", "5"],
-  ["Text fidelity", "5 for critical text / 3 for minor text"],
-  ["Icon fidelity", "4"],
-  ["Pattern/material fidelity", "4"],
-  ["Scene realism", "4"],
-  ["Placement realism", "4"],
-  ["Lighting consistency", "4"],
-] as const;
+import styles from "../shared.module.css";
+import { PipelineToolbar } from "@/components/PipelineToolbar";
+import { ImagePreviewCard } from "@/components/ImagePreviewCard";
+import { usePipelineStore } from "@/store/pipeline";
+import pipelineStyles from "@/components/pipeline.module.css";
 
 export default function QaPage() {
+  const qa = usePipelineStore((s) => s.qa);
+  const setQaCell = usePipelineStore((s) => s.setQaCell);
+  const hardFail = qa.some((row) => {
+    const score = Number(row.score || 0);
+    return (row.category === "Logo fidelity" || row.category === "Text fidelity") && score > 0 && score < 5;
+  });
+
   return (
     <div className={styles.page}>
+      <PipelineToolbar />
       <div className={styles.header}>
         <h1>QA Scorecard</h1>
-        <p>Every draft must pass branding and geometry checks before approval.</p>
+        <p>Score each category and decide pass, repair, or regenerate.</p>
       </div>
+      <section className={styles.card}><ImagePreviewCard /></section>
       <section className={styles.card}>
-        <h2>Scoring thresholds</h2>
+        <h2>Editable QA table</h2>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Pass threshold</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Category</th><th>Score (0-5)</th><th>Notes</th></tr></thead>
             <tbody>
-              {scores.map(([name, threshold]) => (
-                <tr key={name}>
-                  <td>{name}</td>
-                  <td>{threshold}</td>
+              {qa.map((row, index) => (
+                <tr key={row.category}>
+                  <td>{row.category}</td>
+                  <td><input className={pipelineStyles.input} value={row.score} onChange={(e) => setQaCell(index, "score", e.target.value)} placeholder="0-5" /></td>
+                  <td><textarea className={pipelineStyles.textarea} value={row.notes} onChange={(e) => setQaCell(index, "notes", e.target.value)} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </section>
-      <section className={styles.grid}>
-        <article className={styles.card}>
-          <h2>Hard fail conditions</h2>
-          <ul className={styles.list}>
-            <li>Hallucinated brand name or changed logo geometry.</li>
-            <li>Unreadable critical text.</li>
-            <li>Missing or corrupted key icon.</li>
-            <li>Distorted product form.</li>
-          </ul>
-        </article>
-        <article className={styles.card}>
-          <h2>Allowed decisions</h2>
-          <ul className={styles.list}>
-            <li>PASS</li>
-            <li>REPAIR</li>
-            <li>REGENERATE</li>
-            <li>REJECT ANGLE / REJECT SCENE</li>
-          </ul>
-        </article>
+      <section className={styles.card}>
+        <h2>Current decision</h2>
+        <p>{hardFail ? "Hard fail triggered: logo/text critical categories are below pass threshold." : "No hard fail detected from current QA entries."}</p>
       </section>
     </div>
   );

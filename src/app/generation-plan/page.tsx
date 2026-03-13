@@ -1,41 +1,56 @@
+"use client";
+
 import styles from "../shared.module.css";
+import { PipelineToolbar } from "@/components/PipelineToolbar";
+import { ImagePreviewCard } from "@/components/ImagePreviewCard";
+import { usePipelineStore } from "@/store/pipeline";
+
+function recommendExecutionMode(views: string, angle: string, strictness: string) {
+  if (strictness === "maximum preservation" && views.includes("front only")) return "Mode A — same-angle composited scene";
+  if (angle === "significant angle change") return "Mode C — reconstruction-first";
+  return "Mode B — slight-angle assisted generation";
+}
+
+function recommendStyle(intendedUse: string, sceneTypes: string) {
+  if (/Amazon|gallery/i.test(intendedUse)) return "clean ecommerce lifestyle with bright controllable lighting";
+  if (/ads|social/i.test(intendedUse)) return "high-contrast marketing lifestyle scene";
+  if (/kitchen|home/i.test(sceneTypes)) return "natural home-use lifestyle scene";
+  return "minimal premium product scene";
+}
 
 export default function GenerationPlanPage() {
+  const intake = usePipelineStore((s) => s.intake);
+  const audit = usePipelineStore((s) => s.audit);
+  const executionMode = recommendExecutionMode(intake.availableViews, intake.angleTolerance, intake.strictness);
+  const style = recommendStyle(intake.intendedUse, intake.sceneTypes);
+  const rebuildList = audit.filter((x) => /rebuild/i.test(x.action)).map((x) => x.zone).join(", ") || "none";
+  const extractList = audit.filter((x) => /extract/i.test(x.action)).map((x) => x.zone).join(", ") || "none";
+
   return (
     <div className={styles.page}>
+      <PipelineToolbar />
       <div className={styles.header}>
         <h1>Generation Plan</h1>
-        <p>Lock style, routing, prompts, and repair logic before drafts are produced.</p>
+        <p>Plan output strategy from saved intake + detail audit data.</p>
       </div>
+      <section className={styles.card}><ImagePreviewCard /></section>
       <div className={styles.grid}>
+        <section className={styles.card}>
+          <h2>Recommended plan</h2>
+          <ul className={styles.list}>
+            <li><strong>Execution mode:</strong> {executionMode}</li>
+            <li><strong>Style:</strong> {style}</li>
+            <li><strong>Extract zones:</strong> {extractList}</li>
+            <li><strong>Rebuild zones:</strong> {rebuildList}</li>
+            <li><strong>Output target:</strong> {intake.generationCount || "—"} image(s) at {intake.outputSize || "—"}</li>
+          </ul>
+        </section>
         <section className={styles.card}>
           <h2>Model routing</h2>
           <ul className={styles.list}>
-            <li><strong>gpt-5.4</strong>: workflow reasoning, extraction vs rebuild, prompt strategy.</li>
-            <li><strong>Gemini flash image</strong>: quick OCR, coarse visual checks, fast ideation.</li>
-            <li><strong>Gemini pro image</strong>: detailed visual analysis and stricter QA.</li>
-          </ul>
-        </section>
-        <section className={styles.card}>
-          <h2>Execution mode</h2>
-          <ul className={styles.list}>
-            <li><strong>Mode A</strong>: same-angle composited scene for maximum preservation.</li>
-            <li><strong>Mode B</strong>: slight-angle assisted generation for simple products.</li>
-            <li><strong>Mode C</strong>: reconstruction-first for significant angle changes.</li>
-          </ul>
-        </section>
-        <section className={styles.card}>
-          <h2>Prompt constraints</h2>
-          <textarea readOnly value={'preserve product identity\npreserve visible branding\nno extra text\nno altered logo\nno warped geometry\nkeep material finish consistent\nphysically plausible placement'} />
-        </section>
-        <section className={styles.card}>
-          <h2>Repair path</h2>
-          <ul className={styles.list}>
-            <li>Replace logo layer</li>
-            <li>Replace rebuilt text layer</li>
-            <li>Re-composite front face</li>
-            <li>Regenerate background or props only</li>
-            <li>Reduce angle variance if fidelity keeps failing</li>
+            <li><strong>gpt-5.4:</strong> reasoning, extraction vs rebuild, workflow planning.</li>
+            <li><strong>Gemini flash image:</strong> quick OCR, coarse visual checks, fast ideation.</li>
+            <li><strong>Gemini pro image:</strong> detailed visual analysis and strict QA.</li>
           </ul>
         </section>
       </div>

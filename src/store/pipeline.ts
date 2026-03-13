@@ -1,7 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import type { AuditRow, IntakeData, QaScore } from "@/lib/types";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type { AuditRow, IntakeData, Locale, QaScore } from "@/lib/types";
 
 const defaultIntake: IntakeData = {
   imageName: "",
@@ -44,27 +45,39 @@ const defaultQa: QaScore[] = [
 ];
 
 type PipelineState = {
+  locale: Locale;
   intake: IntakeData;
   audit: AuditRow[];
   qa: QaScore[];
+  setLocale: (locale: Locale) => void;
   setIntake: (data: IntakeData) => void;
   setAuditCell: (index: number, field: keyof AuditRow, value: string) => void;
   setQaCell: (index: number, field: keyof QaScore, value: string) => void;
   resetAll: () => void;
 };
 
-export const usePipelineStore = create<PipelineState>((set) => ({
-  intake: defaultIntake,
-  audit: defaultAudit,
-  qa: defaultQa,
-  setIntake: (data) => set({ intake: data }),
-  setAuditCell: (index, field, value) =>
-    set((state) => ({
-      audit: state.audit.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
-    })),
-  setQaCell: (index, field, value) =>
-    set((state) => ({
-      qa: state.qa.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
-    })),
-  resetAll: () => set({ intake: defaultIntake, audit: defaultAudit, qa: defaultQa }),
-}));
+export const usePipelineStore = create<PipelineState>()(
+  persist(
+    (set) => ({
+      locale: "en",
+      intake: defaultIntake,
+      audit: defaultAudit,
+      qa: defaultQa,
+      setLocale: (locale) => set({ locale }),
+      setIntake: (data) => set({ intake: data }),
+      setAuditCell: (index, field, value) =>
+        set((state) => ({
+          audit: state.audit.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
+        })),
+      setQaCell: (index, field, value) =>
+        set((state) => ({
+          qa: state.qa.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
+        })),
+      resetAll: () => set({ locale: "en", intake: defaultIntake, audit: defaultAudit, qa: defaultQa }),
+    }),
+    {
+      name: "product-scene-studio-pipeline",
+      storage: createJSONStorage(() => localStorage),
+    },
+  ),
+);

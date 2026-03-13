@@ -1,5 +1,6 @@
 export type Strictness = "maximum preservation" | "balanced" | "concept-first";
 export type AngleTolerance = "same angle only" | "slight angle shift" | "significant angle change";
+export type Locale = "en" | "zh";
 
 export interface IntakeData {
   imageName: string;

@@ -17,6 +17,27 @@ function extractBase64Data(dataUrl?: string) {
   return { mimeType: match[1], data: match[2] };
 }
 
+function extractGeminiImages(json: any) {
+  const images: string[] = [];
+  for (const candidate of json?.candidates || []) {
+    for (const part of candidate?.content?.parts || []) {
+      if (part?.inlineData?.mimeType?.startsWith("image/") && part?.inlineData?.data) {
+        images.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
+      }
+    }
+  }
+  return images;
+}
+
+function extractGeminiText(json: any) {
+  return (
+    json?.candidates?.[0]?.content?.parts
+      ?.map((p: { text?: string }) => p.text)
+      .filter(Boolean)
+      .join("\n") || ""
+  );
+}
+
 async function callGemini(body: Body) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
@@ -32,7 +53,7 @@ async function callGemini(body: Body) {
     },
   ];
 
-  const model = body.model || "gemini-2.0-flash-exp";
+  const model = body.model || "gemini-3-flash-preview";
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -44,8 +65,9 @@ async function callGemini(body: Body) {
     throw new Error(json?.error?.message || "Gemini request failed.");
   }
 
-  const text = json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).filter(Boolean).join("\n") || "Gemini response received, but no direct image payload was returned by this route.";
-  return { provider: "gemini", model, text, raw: json };
+  const images = extractGeminiImages(json);
+  const text = extractGeminiText(json) || (images.length ? "Image generation response received." : "Gemini response received.");
+  return { provider: "gemini", model, text, images, raw: json };
 }
 
 async function callOpenAI(body: Body) {
@@ -83,7 +105,7 @@ async function callOpenAI(body: Body) {
     .filter(Boolean)
     .join("\n") || "OpenAI response received, but no direct image payload was returned by this route.";
 
-  return { provider: "openai", model, text: outputText, raw: json };
+  return { provider: "openai", model, text: outputText, images: [], raw: json };
 }
 
 export async function POST(req: NextRequest) {

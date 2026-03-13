@@ -54,13 +54,13 @@ export default function GenerationPlanPage() {
       .then((json: ProviderStatus) => {
         setStatus(json);
         setProvider(json.defaultProvider);
-        setModel(json.defaultProvider === "gemini" ? "gemini-2.0-flash-exp" : "gpt-4.1-mini");
+        setModel(json.defaultProvider === "gemini" ? "gemini-3-flash-preview" : "gpt-4.1-mini");
       })
       .catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    setModel(provider === "gemini" ? "gemini-2.0-flash-exp" : "gpt-4.1-mini");
+    setModel(provider === "gemini" ? "gemini-3-flash-preview" : "gpt-4.1-mini");
   }, [provider]);
 
   const promptSuggestion = useMemo(() => {

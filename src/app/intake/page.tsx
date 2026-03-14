@@ -21,11 +21,11 @@ const schema = z.object({
 });
 
 const placementHints: Record<string, string> = {
-  centered: "Best for hero shots and Amazon gallery consistency.",
-  "left-weighted": "Useful when you want space for copy or secondary props on the right.",
-  "in-use": "Best when usage context matters more than packshot symmetry.",
-  tabletop: "Reliable for product realism and easier shadow control.",
-  custom: "Use custom placement instructions for advanced control.",
+  centered: "产品放在画面中间，适合主图或主体很强的构图。",
+  "left-weighted": "产品偏左，右边留更多空间，适合放文案或道具。",
+  "in-use": "产品出现在使用场景中，比如手持、桌面实际使用、人物互动。",
+  tabletop: "产品放在桌面/台面上，更像真实场景摆拍。",
+  custom: "你自己描述产品放在哪里、朝哪里、周围有什么。",
 };
 
 async function fileToDataUrl(file: File) {
@@ -47,6 +47,9 @@ export default function IntakePage() {
   const setReferenceAnalysis = usePipelineStore((s) => s.setReferenceAnalysis);
   const setIntake = usePipelineStore((s) => s.setIntake);
   const addSourceImages = usePipelineStore((s) => s.addSourceImages);
+  const removeSourceImage = usePipelineStore((s) => s.removeSourceImage);
+  const clearPrimaryImage = usePipelineStore((s) => s.clearPrimaryImage);
+  const clearReferenceImage = usePipelineStore((s) => s.clearReferenceImage);
   const [analyzing, setAnalyzing] = useState(false);
   const [referenceAnalyzing, setReferenceAnalyzing] = useState(false);
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitSuccessful } } = useForm<IntakeData>({ resolver: zodResolver(schema), defaultValues: intake });
@@ -124,7 +127,7 @@ export default function IntakePage() {
       <PipelineToolbar />
       <div className={styles.header}>
         <h1>{locale === "en" ? "Intake Form" : "信息填写"}</h1>
-        <p>{locale === "en" ? "Upload source images, optionally add a reference image, and control generation constraints before running." : "上传源图，可选上传参考图，并在生成前设置约束。"}</p>
+        <p>{locale === "en" ? "Upload source images, optionally add a reference image, and control generation constraints before running." : "先把图片和生成要求讲清楚。这里每一项都应该对应最终图片里的变化。"}</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className={styles.grid}>
@@ -134,41 +137,44 @@ export default function IntakePage() {
             <div>
               <label>{locale === "en" ? "Upload primary image" : "上传主图"}</label>
               <input type="file" accept="image/*" onChange={(e) => onPrimaryFileChange(e.target.files?.[0] ?? null)} />
-              <p className={styles.tip}>{analyzing ? "Analyzing image…" : "Primary image drives the default suggestions."}</p>
+              <p className={styles.tip}>{analyzing ? "正在分析主图…" : "主图决定产品本体长什么样，是最主要的产品身份来源。"}</p>
             </div>
             <div>
               <label>{locale === "en" ? "Source resolution" : "源图分辨率"}</label>
               <input {...register("sourceResolution")} placeholder="5000 x 5000" />
+              <p className={styles.tip}>这是主图本身的尺寸，用来判断能不能保留 logo、文字、icon 细节。</p>
               {errors.sourceResolution && <p>{errors.sourceResolution.message}</p>}
             </div>
             <div>
-              <label>{locale === "en" ? "Product occupies % of frame" : "产品占画面比例 %"}</label>
+              <label>{locale === "en" ? "Product occupies % of frame" : "主图中产品占画面比例 %"}</label>
               <input {...register("productCoverage")} placeholder="80" />
+              <p className={styles.tip}>这是“原图里产品有多大”。主要用于系统分析：如果主图里产品太小，后面生成时细节更容易丢，不是你最终场景图里产品大小的直接控制项。</p>
             </div>
             <div>
-              <label>{locale === "en" ? "Available views" : "可用视角"}</label>
+              <label>{locale === "en" ? "Available views" : "目前已有的产品视角"}</label>
               <select {...register("availableViews")}>
                 <option>front only</option><option>front + back</option><option>front + side</option><option>multi-view</option>
               </select>
+              <p className={styles.tip}>这项告诉系统你目前有几个真实视角。视角越多，后面让产品转角度时通常越稳定。</p>
             </div>
           </div>
-          {imageDataUrl ? <img src={imageDataUrl} alt="Preview" className={pipelineStyles.preview} style={{ marginTop: 16, maxWidth: 300 }} /> : null}
+          {imageDataUrl ? <div style={{ marginTop: 16 }}><img src={imageDataUrl} alt="Preview" className={pipelineStyles.preview} style={{ maxWidth: 300 }} /><div className={pipelineStyles.actions} style={{ marginTop: 12 }}><button type="button" className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={() => { clearPrimaryImage(); setValue("imageName", ""); setValue("imageDataUrl", ""); setValue("sourceResolution", ""); setValue("productCoverage", ""); }}>删除主图</button></div></div> : null}
         </section>
 
         <section className={styles.card}>
           <h2>{locale === "en" ? "Multiple source image combination" : "多源图组合"}</h2>
-          <label>{locale === "en" ? "Upload up to 4 source images" : "最多上传 4 张源图"}</label>
+          <label>{locale === "en" ? "Upload up to 4 source images" : "最多上传 4 张补充源图"}</label>
           <input type="file" accept="image/*" multiple onChange={(e) => onMultiSourceChange(e.target.files)} />
-          <p className={styles.tip}>{locale === "en" ? "Use this when you want multiple product views or components merged into one generated result." : "适合把多个产品视角或多个组件合成一张生成结果图。"}</p>
-          {sourceImages?.length ? <div className={pipelineStyles.analysisGrid} style={{ marginTop: 16 }}>{sourceImages.map((img) => <div key={img.name} className={pipelineStyles.analysisCard}><img src={img.dataUrl} alt={img.name} className={pipelineStyles.preview} /><p className={styles.tip}>{img.name} · {img.resolution}</p></div>)}</div> : null}
+          <p className={styles.tip}>多源图不是主图替代，而是补充信息。适合补角度、补结构、补部件，帮助模型理解“同一个产品还有哪些真实视图”。</p>
+          {sourceImages?.length ? <div className={pipelineStyles.analysisGrid} style={{ marginTop: 16 }}>{sourceImages.map((img, index) => <div key={img.name + index} className={pipelineStyles.analysisCard}><img src={img.dataUrl} alt={img.name} className={pipelineStyles.preview} /><p className={styles.tip}>{img.name} · {img.resolution}</p><div className={pipelineStyles.actions}><button type="button" className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={() => { removeSourceImage(index); setValue('sourceImages', sourceImages.filter((_, i) => i !== index), { shouldDirty: true }); }}>删除这张图</button></div></div>)}</div> : null}
         </section>
 
         <section className={styles.card}>
           <h2>{locale === "en" ? "Reference image (optional)" : "参考图片（可选）"}</h2>
           <div className={styles.formGrid}>
             <div>
-              <label><input type="checkbox" {...register("useReferenceImage")} /> {locale === "en" ? "Enable reference image instructions" : "启用参考图指令"}</label>
-              <p className={styles.tip}>{locale === "en" ? "If enabled, the final prompt will include reference-derived structure and style instructions." : "启用后，最终生成 prompt 会加入参考图提取出的结构与风格指令。"}</p>
+              <label><input type="checkbox" {...register("useReferenceImage")} /> {locale === "en" ? "Enable reference image instructions" : "启用参考图影响"}</label>
+              <p className={styles.tip}>参考图不是告诉模型“你的产品长什么样”，而是告诉模型“我想要这种风格、构图、氛围、场景感觉”。</p>
             </div>
             <div>
               <label>{locale === "en" ? "Reference analysis model" : "参考图分析模型"}</label>
@@ -177,16 +183,17 @@ export default function IntakePage() {
                 <option>gemini-3.1-flash-image-preview</option>
                 <option>gemini-3-pro-image-preview</option>
               </select>
+              <p className={styles.tip}>这项的目的是决定“参考图分析说明”由哪个模型来理解。后续可以继续增强成真正模型分析链路。</p>
             </div>
           </div>
           {useReferenceImage ? <>
             <label>{locale === "en" ? "Upload reference image" : "上传参考图"}</label>
             <input type="file" accept="image/*" onChange={(e) => onReferenceFileChange(e.target.files?.[0] ?? null)} />
-            <p className={styles.tip}>{referenceAnalyzing ? "Analyzing reference image…" : "Reference image is used for style and composition hints, not as a required source unless you enable it."}</p>
-            {watch("referenceImageDataUrl") ? <img src={watch("referenceImageDataUrl")} alt="Reference preview" className={pipelineStyles.preview} style={{ marginTop: 16, maxWidth: 300 }} /> : null}
+            <p className={styles.tip}>{referenceAnalyzing ? "正在分析参考图…" : "参考图会影响最终画面的风格和构图，不是主要产品身份来源。"}</p>
+            {watch("referenceImageDataUrl") ? <div style={{ marginTop: 16 }}><img src={watch("referenceImageDataUrl")} alt="Reference preview" className={pipelineStyles.preview} style={{ maxWidth: 300 }} /><div className={pipelineStyles.actions} style={{ marginTop: 12 }}><button type="button" className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={() => { clearReferenceImage(); setValue('referenceImageName',''); setValue('referenceImageDataUrl',''); setValue('useReferenceImage', false); }}>删除参考图</button></div></div> : null}
             {referenceAnalysis ? <div className={pipelineStyles.analysisGrid} style={{ marginTop: 16 }}>
-              <div className={pipelineStyles.analysisCard}><h3>Structure hint</h3><p className={styles.tip}>{referenceAnalysis.structureHint}</p></div>
-              <div className={pipelineStyles.analysisCard}><h3>Style hint</h3><p className={styles.tip}>{referenceAnalysis.styleHint}</p></div>
+              <div className={pipelineStyles.analysisCard}><h3>结构提示</h3><p className={styles.tip}>{referenceAnalysis.structureHint}</p></div>
+              <div className={pipelineStyles.analysisCard}><h3>风格提示</h3><p className={styles.tip}>{referenceAnalysis.styleHint}</p></div>
             </div> : null}
           </> : null}
         </section>
@@ -195,82 +202,88 @@ export default function IntakePage() {
           <h2>{locale === "en" ? "Output request" : "输出要求"}</h2>
           <div className={styles.formGrid}>
             <div>
-              <label>Aspect ratio</label>
+              <label>画面比例</label>
               <select {...register("aspectRatio")}>
                 {[...(recommendationSummary?.ratios ?? []), "1:1", "4:5", "16:9", "3:4", "2:3", "3:2", "9:16", "21:9", "custom"].filter((v, i, a) => a.indexOf(v) === i).map((x) => <option key={x}>{x}</option>)}
               </select>
-              {aspectRatio === "custom" ? <input {...register("aspectRatioCustom")} placeholder="e.g. 5:4" style={{ marginTop: 10 }} /> : null}
+              {aspectRatio === "custom" ? <input {...register("aspectRatioCustom")} placeholder="例如 5:4" style={{ marginTop: 10 }} /> : null}
+              <p className={styles.tip}>它控制最终图片横竖比例。不是风格项，而是“画布比例”。会影响产品能放多大、场景能容纳多少内容。</p>
             </div>
             <div>
-              <label>{locale === "en" ? "Output pixel size" : "输出像素"}</label>
+              <label>输出像素</label>
               <select {...register("outputSize")}>
                 {[...(recommendationSummary?.sizes ?? []), "2000 x 2000", "2000 x 2500", "1920 x 1080", "3000 x 3000", "2560 x 1440", "1080 x 1350", "custom"].filter((v, i, a) => a.indexOf(v) === i).map((x) => <option key={x}>{x}</option>)}
               </select>
-              {outputSize === "custom" ? <input {...register("outputSizeCustom")} placeholder="e.g. 2400 x 3000" style={{ marginTop: 10 }} /> : null}
+              {outputSize === "custom" ? <input {...register("outputSizeCustom")} placeholder="例如 2400 x 3000" style={{ marginTop: 10 }} /> : null}
+              <p className={styles.tip}>它控制最终导出图的分辨率。越大越适合后续精修或电商图使用，但生成成本也更高。</p>
             </div>
-            <div><label>{locale === "en" ? "Generation count" : "生成数量"}</label><select {...register("generationCount")}><option>1</option><option>2</option><option>4</option><option>6</option><option>8</option></select></div>
+            <div><label>生成数量</label><select {...register("generationCount")}><option>1</option><option>2</option><option>4</option><option>6</option><option>8</option></select><p className={styles.tip}>一次想出几张结果图。</p></div>
             <div>
-              <label>{locale === "en" ? "Intended use" : "用途"}</label>
+              <label>用途</label>
               <select {...register("intendedUse")}>
                 {[...(recommendationSummary?.uses ?? []), "Amazon gallery", "A+ / PDP", "Ads", "Social", "Landing page hero", "Marketplace listing", "Email banner", "Website product block"].filter((v, i, a) => a.indexOf(v) === i).map((x) => <option key={x}>{x}</option>)}
               </select>
+              <p className={styles.tip}>用途会影响构图与风格。比如 Amazon gallery 往往更克制，Ads 可以更有氛围感。</p>
             </div>
           </div>
         </section>
 
         <section className={styles.card}>
-          <h2>{locale === "en" ? "Scene and placement" : "场景与摆放"}</h2>
+          <h2>{locale === "en" ? "Scene and placement" : "场景与产品摆放"}</h2>
           <div className={styles.formGrid}>
             <div>
-              <label>{locale === "en" ? "Scene types" : "场景类型"}</label>
-              <textarea {...register("sceneTypes")} placeholder="minimal tabletop, kitchen counter, in-use hand-held" />
+              <label>场景类型</label>
+              <textarea {...register("sceneTypes")} placeholder="例如：厨房台面、极简桌面、浴室洗手台、手持使用场景" />
+              <p className={styles.tip}>这项回答“产品出现在哪里”。它决定环境、道具、背景、氛围。</p>
             </div>
             <div>
-              <label>{locale === "en" ? "Placement preference" : "摆放偏好"}</label>
+              <label>产品摆放方式</label>
               <select {...register("placementPreference")}>
-                <option value="centered">centered</option><option value="left-weighted">left-weighted</option><option value="in-use">in-use</option><option value="tabletop">tabletop</option><option value="custom">custom</option>
+                <option value="centered">居中摆放</option><option value="left-weighted">靠左摆放</option><option value="in-use">使用中摆放</option><option value="tabletop">桌面摆放</option><option value="custom">自定义</option>
               </select>
-              {placementPreference === "custom" ? <textarea {...register("placementCustom")} placeholder="e.g. product anchored lower-right with copy space on left" style={{ marginTop: 10 }} /> : null}
-              <p className={styles.tip}>{placementHints[placementPreference] || "Choose based on copy space and scene realism needs."}</p>
+              {placementPreference === "custom" ? <textarea {...register("placementCustom")} placeholder="例如：产品放在右下角，左侧留白；产品斜放在桌面中央；产品靠近前景" style={{ marginTop: 10 }} /> : null}
+              <p className={styles.tip}>{placementHints[placementPreference] || "这项决定产品在画面里放哪里、怎么放，不是风格本身。"}</p>
             </div>
             <div>
-              <label>{locale === "en" ? "Angle tolerance" : "角度容忍度"}</label>
+              <label>产品角度变化要求</label>
               <select {...register("angleTolerance")}>
                 <option>same angle only</option><option>slight angle shift</option><option>significant angle change</option>
               </select>
-              <input {...register("angleDegrees")} placeholder="e.g. 0-15°, 20°, 35° side turn" style={{ marginTop: 10 }} />
+              <input {...register("angleDegrees")} placeholder="例如：保持正面；左转 15°；右前 30°；俯拍 20°" style={{ marginTop: 10 }} />
+              <p className={styles.tip}>这项决定产品本体转多少角度。它应该影响“产品朝向”和“镜头看到的是哪个面”。如果你要明显角度变化，必须在这里写清楚。</p>
             </div>
             <div>
-              <label>{locale === "en" ? "Style preference" : "风格偏好"}</label>
+              <label>风格偏好</label>
               <select {...register("stylePreference")}>
-                <option value="">auto-suggest from image</option>
-                <option value="clean ecommerce lifestyle with bright controllable lighting">clean ecommerce lifestyle</option>
-                <option value="premium contrast-forward studio scene with controlled highlights">premium dark studio</option>
-                <option value="natural home-use lifestyle scene">natural home-use lifestyle</option>
-                <option value="high-contrast marketing lifestyle scene">high-contrast marketing lifestyle</option>
-                <option value="custom">custom</option>
+                <option value="">根据图片自动建议</option>
+                <option value="clean ecommerce lifestyle with bright controllable lighting">干净电商风</option>
+                <option value="premium contrast-forward studio scene with controlled highlights">高级深色棚拍风</option>
+                <option value="natural home-use lifestyle scene">自然生活方式风</option>
+                <option value="high-contrast marketing lifestyle scene">广告感高对比风</option>
+                <option value="custom">自定义</option>
               </select>
-              {stylePreference === "custom" ? <textarea {...register("styleCustom")} placeholder="e.g. luxury skincare editorial with soft side lighting" style={{ marginTop: 10 }} /> : null}
+              {stylePreference === "custom" ? <textarea {...register("styleCustom")} placeholder="例如：高级护肤广告感、清晨自然光、杂志封面感" style={{ marginTop: 10 }} /> : null}
+              <p className={styles.tip}>这项回答“整张图看起来像什么风格”，不是产品放哪里。</p>
             </div>
           </div>
         </section>
 
         <section className={styles.card}>
-          <h2>{locale === "en" ? "Product prominence and controls" : "产品占比与控制"}</h2>
+          <h2>{locale === "en" ? "Product prominence and controls" : "产品大小与控制"}</h2>
           <div className={styles.formGrid}>
-            <div><label>{locale === "en" ? "Target product coverage in final image (%)" : "目标产品占画面比例 (%)"}</label><input {...register("productFrameCoverageTarget")} placeholder="55" /></div>
-            <div><label>{locale === "en" ? "Elements that must never change" : "绝不能变化的元素"}</label><textarea {...register("mustPreserve")} placeholder="logo, critical text, icons" /></div>
-            <div><label>{locale === "en" ? "Preservation strictness" : "保真严格度"}</label><select {...register("strictness")}><option>maximum preservation</option><option>balanced</option><option>concept-first</option></select></div>
-            <div><label>{locale === "en" ? "Max iteration rounds" : "最大迭代轮数"}</label><select {...register("maxIterations")}><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+            <div><label>生成图中产品目标占比 (%)</label><input {...register("productFrameCoverageTarget")} placeholder="55" /><p className={styles.tip}>这项回答“最终生成图里产品要占多大”。比如 70 表示产品更大、更像主图；30 表示场景更多、产品更小。目前这项还是弱到中等控制，不是绝对硬控制。</p></div>
+            <div><label>绝不能变化的元素</label><textarea {...register("mustPreserve")} placeholder="logo, critical text, icons" /><p className={styles.tip}>告诉系统哪些内容不能乱：比如 logo、文字、icon、包装主图案。</p></div>
+            <div><label>保真严格度</label><select {...register("strictness")}><option>maximum preservation</option><option>balanced</option><option>concept-first</option></select><p className={styles.tip}>越偏 maximum preservation，越倾向保留产品本体与细节；越偏 concept-first，越允许模型更自由发挥。</p></div>
+            <div><label>最大迭代轮数</label><select {...register("maxIterations")}><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select><p className={styles.tip}>如果结果不满意，最多允许系统反复尝试几轮。</p></div>
           </div>
         </section>
 
         {analysis ? (
           <section className={styles.card}>
-            <h2>{locale === "en" ? "Automatic image analysis" : "自动图片分析"}</h2>
+            <h2>自动图片分析</h2>
             <div className={pipelineStyles.analysisGrid}>
-              <div className={pipelineStyles.analysisCard}><h3>{locale === "en" ? "Detected facts" : "检测结果"}</h3><div className={pipelineStyles.chips}><span className={pipelineStyles.chip}>{analysis.width}×{analysis.height}</span><span className={pipelineStyles.chip}>{analysis.orientation}</span><span className={pipelineStyles.chip}>coverage ~ {analysis.estimatedCoverage}%</span><span className={pipelineStyles.chip}>bg: {analysis.backgroundTone}</span></div></div>
-              <div className={pipelineStyles.analysisCard}><h3>{locale === "en" ? "Recommendations" : "推荐项"}</h3><div className={pipelineStyles.chips}>{analysis.suggestedAspectRatios.map((x) => <span key={x} className={pipelineStyles.chip}>{x}</span>)}{analysis.suggestedOutputSizes.map((x) => <span key={x} className={pipelineStyles.chip}>{x}</span>)}</div><p className={styles.tip}>{analysis.structureHint}</p><p className={styles.tip}>{analysis.styleHint}</p></div>
+              <div className={pipelineStyles.analysisCard}><h3>检测结果</h3><div className={pipelineStyles.chips}><span className={pipelineStyles.chip}>{analysis.width}×{analysis.height}</span><span className={pipelineStyles.chip}>{analysis.orientation}</span><span className={pipelineStyles.chip}>coverage ~ {analysis.estimatedCoverage}%</span><span className={pipelineStyles.chip}>bg: {analysis.backgroundTone}</span></div></div>
+              <div className={pipelineStyles.analysisCard}><h3>推荐项</h3><div className={pipelineStyles.chips}>{analysis.suggestedAspectRatios.map((x) => <span key={x} className={pipelineStyles.chip}>{x}</span>)}{analysis.suggestedOutputSizes.map((x) => <span key={x} className={pipelineStyles.chip}>{x}</span>)}</div><p className={styles.tip}>{analysis.structureHint}</p><p className={styles.tip}>{analysis.styleHint}</p></div>
             </div>
             <ul className={styles.list} style={{ marginTop: 16 }}>{analysis.notes.map((note) => <li key={note}>{note}</li>)}</ul>
           </section>

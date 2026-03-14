@@ -68,6 +68,9 @@ type PipelineState = {
   setReferenceAnalysis: (analysis: ImageAnalysis | null) => void;
   setIntake: (data: IntakeData) => void;
   addSourceImages: (items: ImageAsset[]) => void;
+  removeSourceImage: (index: number) => void;
+  clearPrimaryImage: () => void;
+  clearReferenceImage: () => void;
   setAuditCell: (index: number, field: keyof AuditRow, value: string) => void;
   setQaCell: (index: number, field: keyof QaScore, value: string) => void;
   resetAll: () => void;
@@ -87,6 +90,15 @@ export const usePipelineStore = create<PipelineState>()(
       setReferenceAnalysis: (analysis) => set({ referenceAnalysis: analysis }),
       setIntake: (data) => set({ intake: data }),
       addSourceImages: (items) => set((state) => ({ intake: { ...state.intake, sourceImages: items.slice(0, 4) } })),
+      removeSourceImage: (index) => set((state) => ({ intake: { ...state.intake, sourceImages: state.intake.sourceImages.filter((_, i) => i !== index) } })),
+      clearPrimaryImage: () => set((state) => ({
+        analysis: null,
+        intake: { ...state.intake, imageName: "", imageDataUrl: "", sourceResolution: "", productCoverage: "" }
+      })),
+      clearReferenceImage: () => set((state) => ({
+        referenceAnalysis: null,
+        intake: { ...state.intake, referenceImageName: "", referenceImageDataUrl: "", useReferenceImage: false }
+      })),
       setAuditCell: (index, field, value) => set((state) => ({ audit: state.audit.map((row, i) => (i === index ? { ...row, [field]: value } : row)) })),
       setQaCell: (index, field, value) => set((state) => ({ qa: state.qa.map((row, i) => (i === index ? { ...row, [field]: value } : row)) })),
       resetAll: () => set({ locale: "en", analysis: null, referenceAnalysis: null, intake: defaultIntake, audit: defaultAudit, qa: defaultQa }),

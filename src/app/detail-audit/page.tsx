@@ -7,6 +7,7 @@ import { usePipelineStore } from "@/store/pipeline";
 import pipelineStyles from "@/components/pipeline.module.css";
 
 export default function DetailAuditPage() {
+  const locale = usePipelineStore((s) => s.locale);
   const audit = usePipelineStore((s) => s.audit);
   const setAuditCell = usePipelineStore((s) => s.setAuditCell);
 
@@ -14,25 +15,26 @@ export default function DetailAuditPage() {
     <div className={styles.page}>
       <PipelineToolbar />
       <div className={styles.header}>
-        <h1>Detail Audit</h1>
-        <p>Inspect the uploaded product image and decide reuse vs extract vs rebuild.</p>
+        <h1>{locale === 'en' ? 'Detail Audit' : '细节审核'}</h1>
+        <p>{locale === 'en' ? 'Review which parts of the product are most important before generation.' : '生成前先判断产品哪些区域最重要，哪些地方绝不能乱。'}</p>
       </div>
       <section className={styles.card}><ImagePreviewCard /></section>
       <section className={styles.card}>
-        <h2>Editable zone audit</h2>
+        <h2>{locale === 'en' ? 'Editable zone audit' : '可编辑区域审核'}</h2>
+        <p className={styles.tip}>这张表的作用是：告诉系统“产品的哪些区域最重要、里面是什么、如果出错会不会影响商用，以及生成时建议怎么处理”。</p>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
-              <tr><th>Zone</th><th>Contains</th><th>Importance</th><th>Action</th><th>Notes</th></tr>
+              <tr><th>区域</th><th>区域内容</th><th>重要程度</th><th>处理方式</th><th>备注</th></tr>
             </thead>
             <tbody>
               {audit.map((row, index) => (
                 <tr key={row.zone}>
                   <td>{row.zone}</td>
-                  <td><input className={pipelineStyles.input} value={row.contains} onChange={(e) => setAuditCell(index, "contains", e.target.value)} /></td>
-                  <td><input className={pipelineStyles.input} value={row.importance} onChange={(e) => setAuditCell(index, "importance", e.target.value)} /></td>
-                  <td><input className={pipelineStyles.input} value={row.action} onChange={(e) => setAuditCell(index, "action", e.target.value)} /></td>
-                  <td><textarea className={pipelineStyles.textarea} value={row.notes} onChange={(e) => setAuditCell(index, "notes", e.target.value)} /></td>
+                  <td><input className={pipelineStyles.input} value={row.contains} onChange={(e) => setAuditCell(index, 'contains', e.target.value)} placeholder="例如：logo、主标题、icon、小字" /></td>
+                  <td><input className={pipelineStyles.input} value={row.importance} onChange={(e) => setAuditCell(index, 'importance', e.target.value)} placeholder="例如：非常重要 / 一般重要 / 可忽略" /></td>
+                  <td><input className={pipelineStyles.input} value={row.action} onChange={(e) => setAuditCell(index, 'action', e.target.value)} placeholder="例如：尽量保留 / 提取增强 / 必须重建" /></td>
+                  <td><textarea className={pipelineStyles.textarea} value={row.notes} onChange={(e) => setAuditCell(index, 'notes', e.target.value)} placeholder="例如：这块 logo 一旦变形就不能用；这块小字可以弱化" /></td>
                 </tr>
               ))}
             </tbody>

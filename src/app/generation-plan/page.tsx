@@ -84,17 +84,18 @@ export default function GenerationPlanPage() {
 
   const inputSummary = useMemo(() => {
     return [
-      { title: "Primary product", value: intake.imageName || "Not uploaded" },
-      { title: "Source bundle", value: `${intake.sourceImages?.length || 0} image(s)` },
-      { title: "Reference image", value: intake.useReferenceImage ? (intake.referenceImageName || "Enabled but not uploaded") : "Disabled" },
-      { title: "Aspect ratio", value: aspect || "—" },
-      { title: "Output size", value: outputSize || "—" },
-      { title: "Placement", value: placement || "—" },
-      { title: "Style", value: style || "—" },
-      { title: "Coverage target", value: `${intake.productFrameCoverageTarget || "—"}%` },
-      { title: "Angle", value: `${intake.angleTolerance} / ${intake.angleDegrees || "—"}` },
+      { title: locale === "en" ? "Primary product" : "主产品图", value: intake.imageName || (locale === "en" ? "Not uploaded" : "未上传") },
+      { title: locale === "en" ? "Source bundle" : "多源图数量", value: `${intake.sourceImages?.length || 0} ${locale === "en" ? "image(s)" : "张"}` },
+      { title: locale === "en" ? "Reference image" : "参考图", value: intake.useReferenceImage ? (intake.referenceImageName || (locale === "en" ? "Enabled but not uploaded" : "已启用但未上传")) : (locale === "en" ? "Disabled" : "未启用") },
+      { title: locale === "en" ? "Aspect ratio" : "画面比例", value: aspect || "—" },
+      { title: locale === "en" ? "Output size" : "输出像素", value: outputSize || "—" },
+      { title: locale === "en" ? "Placement" : "摆放方式", value: placement || "—" },
+      { title: locale === "en" ? "Style" : "风格", value: style || "—" },
+      { title: locale === "en" ? "Coverage target" : "产品目标占比", value: `${intake.productFrameCoverageTarget || "—"}%` },
+      { title: locale === "en" ? "Angle" : "产品角度变化", value: `${intake.angleTolerance} / ${intake.angleDegrees || "—"}` },
+      { title: locale === "en" ? "Generation count" : "生成数量", value: intake.generationCount || "—" },
     ];
-  }, [intake, aspect, outputSize, placement, style]);
+  }, [intake, aspect, outputSize, placement, style, locale]);
 
   const downloadImage = (dataUrl: string, index: number) => {
     const a = document.createElement("a");
@@ -153,23 +154,23 @@ export default function GenerationPlanPage() {
   return (
     <div className={styles.page}>
       <PipelineToolbar />
-      <div className={styles.header}><h1>{locale === "en" ? "Generation Plan" : "生成计划"}</h1><p>{locale === "en" ? "V10 adds input-summary visualization, stronger result checks, and better download handling." : "V10 增加了输入摘要可视化、结果质量检查与更好的下载体验。"}</p></div>
+      <div className={styles.header}><h1>{locale === "en" ? "Generation Plan" : "生成计划"}</h1><p>{locale === "en" ? "Review what will be sent to the model, then run generation." : "先确认这次会把什么内容发送给模型，再执行生成。这里也会说明每个关键参数会影响 prompt 的哪一部分。"}</p></div>
       <section className={styles.card}><ImagePreviewCard /></section>
 
       <section className={styles.card}>
         <h2>{locale === "en" ? "Generation input summary" : "生成输入摘要"}</h2>
         <div className={pipelineStyles.summaryGrid}>
           <div className={pipelineStyles.summaryCard}>
-            <h4>Primary image</h4>
-            {intake.imageDataUrl ? <img src={intake.imageDataUrl} alt="Primary" className={pipelineStyles.miniImage} /> : <p className={styles.tip}>Not uploaded</p>}
+            <h4>{locale === "en" ? "Primary image" : "主图"}</h4>
+            {intake.imageDataUrl ? <img src={intake.imageDataUrl} alt="Primary" className={pipelineStyles.miniImage} /> : <p className={styles.tip}>{locale === "en" ? "Not uploaded" : "未上传"}</p>}
           </div>
           <div className={pipelineStyles.summaryCard}>
-            <h4>Reference image</h4>
-            {intake.useReferenceImage && intake.referenceImageDataUrl ? <img src={intake.referenceImageDataUrl} alt="Reference" className={pipelineStyles.miniImage} /> : <p className={styles.tip}>Disabled or not uploaded</p>}
+            <h4>{locale === "en" ? "Reference image" : "参考图"}</h4>
+            {intake.useReferenceImage && intake.referenceImageDataUrl ? <img src={intake.referenceImageDataUrl} alt="Reference" className={pipelineStyles.miniImage} /> : <p className={styles.tip}>{locale === "en" ? "Disabled or not uploaded" : "未启用或未上传"}</p>}
           </div>
           <div className={pipelineStyles.summaryCard}>
-            <h4>Source bundle</h4>
-            {intake.sourceImages?.length ? <div className={pipelineStyles.chips}>{intake.sourceImages.map((img) => <span key={img.name} className={pipelineStyles.chip}>{img.name}</span>)}</div> : <p className={styles.tip}>No extra source images</p>}
+            <h4>{locale === "en" ? "Source bundle" : "多源图"}</h4>
+            {intake.sourceImages?.length ? <div className={pipelineStyles.chips}>{intake.sourceImages.map((img) => <span key={img.name} className={pipelineStyles.chip}>{img.name}</span>)}</div> : <p className={styles.tip}>{locale === "en" ? "No extra source images" : "没有额外多源图"}</p>}
           </div>
         </div>
         <div className={pipelineStyles.analysisGrid} style={{ marginTop: 16 }}>
@@ -178,16 +179,28 @@ export default function GenerationPlanPage() {
       </section>
 
       <div className={styles.grid}>
-        <section className={styles.card}><h2>{locale === "en" ? "Recommended plan" : "推荐计划"}</h2><ul className={styles.list}><li><strong>Execution mode:</strong> {executionMode}</li><li><strong>Style:</strong> {style}</li><li><strong>Extract zones:</strong> {extractList}</li><li><strong>Rebuild zones:</strong> {rebuildList}</li><li><strong>Aspect ratio:</strong> {aspect}</li><li><strong>Output size:</strong> {outputSize}</li><li><strong>Placement:</strong> {placement}</li><li><strong>Target product coverage:</strong> {intake.productFrameCoverageTarget}%</li><li><strong>Reference image:</strong> {intake.useReferenceImage ? "enabled" : "disabled"}</li><li><strong>Multi-source images:</strong> {intake.sourceImages?.length || 0}</li></ul></section>
-        <section className={styles.card}><h2>{locale === "en" ? "Provider status" : "Provider 状态"}</h2><div className={pipelineStyles.chips}><span className={pipelineStyles.chip}>Gemini: {status?.providers.gemini ? "configured" : "not configured"}</span><span className={pipelineStyles.chip}>OpenAI: {status?.providers.openai ? "configured" : "not configured"}</span></div><p className={styles.tip}>{locale === "en" ? "Keys are read from server environment variables only." : "密钥只从服务端环境变量读取。"}</p></section>
+        <section className={styles.card}><h2>{locale === "en" ? "Recommended plan" : "推荐计划"}</h2><ul className={styles.list}><li><strong>{locale === "en" ? "Execution mode" : "执行模式"}:</strong> {executionMode}</li><li><strong>{locale === "en" ? "Style" : "风格"}:</strong> {style}</li><li><strong>{locale === "en" ? "Extract zones" : "可提取区域"}:</strong> {extractList}</li><li><strong>{locale === "en" ? "Rebuild zones" : "需重建区域"}:</strong> {rebuildList}</li><li><strong>{locale === "en" ? "Aspect ratio" : "画面比例"}:</strong> {aspect}</li><li><strong>{locale === "en" ? "Output size" : "输出像素"}:</strong> {outputSize}</li><li><strong>{locale === "en" ? "Placement" : "摆放方式"}:</strong> {placement}</li><li><strong>{locale === "en" ? "Target product coverage" : "产品目标占比"}:</strong> {intake.productFrameCoverageTarget}%</li><li><strong>{locale === "en" ? "Reference image" : "参考图"}:</strong> {intake.useReferenceImage ? (locale === "en" ? "enabled" : "已启用") : (locale === "en" ? "disabled" : "未启用")}</li><li><strong>{locale === "en" ? "Multi-source images" : "多源图数量"}:</strong> {intake.sourceImages?.length || 0}</li></ul></section>
+        <section className={styles.card}><h2>{locale === "en" ? "Provider status" : "Provider 状态"}</h2><div className={pipelineStyles.chips}><span className={pipelineStyles.chip}>Gemini: {status?.providers.gemini ? (locale === "en" ? "configured" : "已配置") : (locale === "en" ? "not configured" : "未配置")}</span><span className={pipelineStyles.chip}>OpenAI: {status?.providers.openai ? (locale === "en" ? "configured" : "已配置") : (locale === "en" ? "not configured" : "未配置")}</span></div><p className={styles.tip}>{locale === "en" ? "Keys are read from server environment variables only." : "密钥只从服务端环境变量读取。这里不会在前端暴露真实密钥。"}</p></section>
       </div>
+
+      <section className={styles.card}>
+        <h2>{locale === "en" ? "How fields affect generation" : "字段如何影响生成"}</h2>
+        <ul className={styles.list}>
+          <li><strong>{locale === "en" ? "Scene types" : "场景类型"}：</strong>{locale === "en" ? "Controls where the product appears and what environment/props exist." : "决定产品出现在哪里、周围有什么环境和道具。"}</li>
+          <li><strong>{locale === "en" ? "Placement" : "摆放方式"}：</strong>{locale === "en" ? "Controls where the product sits in the frame (center, left, in-use, tabletop, etc.)." : "决定产品放在画面的哪个位置，例如居中、靠左、手持、桌面。"}</li>
+          <li><strong>{locale === "en" ? "Angle" : "产品角度变化"}：</strong>{locale === "en" ? "Controls how much the product turns relative to the source view." : "决定产品相对原图改变多少角度。"}</li>
+          <li><strong>{locale === "en" ? "Coverage target" : "产品目标占比"}：</strong>{locale === "en" ? "Asks the model to make the product larger or smaller in the final frame. Current control strength is weak-to-medium." : "要求模型让产品在最终画面里更大或更小。目前属于弱到中等控制。"}</li>
+          <li><strong>{locale === "en" ? "Reference image" : "参考图"}：</strong>{locale === "en" ? "Mainly affects style/composition, not the product identity itself." : "主要影响风格、构图、氛围，不是主要产品身份来源。"}</li>
+          <li><strong>{locale === "en" ? "Source bundle" : "多源图"}：</strong>{locale === "en" ? "Adds extra real views/components so the model can understand more structure." : "补充更多真实视角或部件，帮助模型理解结构。"}</li>
+        </ul>
+      </section>
 
       <section className={styles.card}>
         <h2>{locale === "en" ? "Run generation" : "执行生成"}</h2>
         <div className={styles.formGrid}>
-          <div><label>Provider</label><select value={provider} onChange={(e) => setProvider(e.target.value as "gemini" | "openai")}><option value="gemini">Gemini</option><option value="openai">OpenAI</option></select></div>
-          <div><label>Model</label><select value={model} onChange={(e) => setModel(e.target.value)}>{provider === 'gemini' ? <><option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option><option value="gemini-3-flash-preview">gemini-3-flash-preview</option><option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview</option></> : <option value="gpt-4.1-mini">gpt-4.1-mini</option>}</select></div>
-          <div style={{ gridColumn: "1 / -1" }}><label>Prompt</label><textarea className={pipelineStyles.textarea} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={promptSuggestion} /></div>
+          <div><label>{locale === "en" ? "Provider" : "提供方"}</label><select value={provider} onChange={(e) => setProvider(e.target.value as "gemini" | "openai")}><option value="gemini">Gemini</option><option value="openai">OpenAI</option></select><p className={styles.tip}>{locale === "en" ? "Choose which backend model provider handles this generation." : "选择由哪个模型服务来执行这次生成。"}</p></div>
+          <div><label>{locale === "en" ? "Model" : "模型"}</label><select value={model} onChange={(e) => setModel(e.target.value)}>{provider === 'gemini' ? <><option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option><option value="gemini-3-flash-preview">gemini-3-flash-preview</option><option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview</option></> : <option value="gpt-4.1-mini">gpt-4.1-mini</option>}</select><p className={styles.tip}>{locale === "en" ? "For direct image output, prefer gemini-3.1-flash-image-preview." : "如果目标是直接返回图片，优先使用 gemini-3.1-flash-image-preview。"}</p></div>
+          <div style={{ gridColumn: "1 / -1" }}><label>{locale === "en" ? "Prompt" : "最终生成指令"}</label><textarea className={pipelineStyles.textarea} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={promptSuggestion} /><p className={styles.tip}>{locale === "en" ? "This is the final instruction sent to the model. If you leave it blank, the system will auto-compose it from your form fields." : "这是最终发给模型的指令。如果留空，系统会根据你前面填写的字段自动拼装。"}</p></div>
         </div>
         <div className={pipelineStyles.actions} style={{ marginTop: 16 }}>
           <button className={pipelineStyles.button} onClick={runGenerate} disabled={running}>{running ? "Running…" : "Generate"}</button>
@@ -198,12 +211,12 @@ export default function GenerationPlanPage() {
 
       <section className={styles.card}>
         <h2>{locale === "en" ? "Result quality control" : "结果质量控制"}</h2>
-        {qualityNotes.length ? <ul className={styles.list}>{qualityNotes.map((note) => <li key={note}>{note}</li>)}</ul> : <p className={`${styles.tip} ${pipelineStyles.statusWarn}`}>No quality notes yet. Run generation first.</p>}
+        {qualityNotes.length ? <ul className={styles.list}>{qualityNotes.map((note) => <li key={note}>{note}</li>)}</ul> : <p className={`${styles.tip} ${pipelineStyles.statusWarn}`}>{locale === "en" ? "No quality notes yet. Run generation first." : "还没有质量说明，请先执行生成。"}</p>}
       </section>
 
       <section className={styles.card}>
         <h2>{locale === "en" ? "Result" : "结果"}</h2>
-        {resultImages.length ? <div className={pipelineStyles.analysisGrid}>{resultImages.map((src, index) => <div key={src.slice(0, 80) + index} className={pipelineStyles.analysisCard}><img src={src} alt={`Generated ${index + 1}`} className={pipelineStyles.preview} /><div className={pipelineStyles.actions} style={{ marginTop: 12 }}><button className={pipelineStyles.button} onClick={() => downloadImage(src, index)}>Download</button></div></div>)}</div> : null}
+        {resultImages.length ? <div className={pipelineStyles.analysisGrid}>{resultImages.map((src, index) => <div key={src.slice(0, 80) + index} className={pipelineStyles.analysisCard}><img src={src} alt={`Generated ${index + 1}`} className={pipelineStyles.preview} /><div className={pipelineStyles.actions} style={{ marginTop: 12 }}><button className={pipelineStyles.button} onClick={() => downloadImage(src, index)}>{locale === "en" ? "Download" : "下载"}</button></div></div>)}</div> : null}
         <pre className={pipelineStyles.code}>{resultText || (locale === "en" ? "No generation result yet." : "还没有生成结果。")}</pre>
       </section>
     </div>

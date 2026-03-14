@@ -97,7 +97,7 @@ export default function GenerationPlanPage() {
       const res = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, model, prompt: prompt || promptSuggestion, imageDataUrl: intake.imageDataUrl, aspectRatio: aspect, outputSize }),
+        body: JSON.stringify({ provider, model, prompt: prompt || promptSuggestion, imageDataUrl: intake.imageDataUrl, referenceImageDataUrl: intake.referenceImageDataUrl, useReferenceImage: intake.useReferenceImage, sourceImages: intake.sourceImages, aspectRatio: aspect, outputSize }),
       });
       const json: GenerateResult & { error?: string } = await res.json();
       if (!res.ok) throw new Error(json.error || "Generation failed.");

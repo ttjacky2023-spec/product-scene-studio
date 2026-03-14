@@ -6,6 +6,9 @@ type Body = {
   prompt: string;
   model?: string;
   imageDataUrl?: string;
+  referenceImageDataUrl?: string;
+  useReferenceImage?: boolean;
+  sourceImages?: { name: string; dataUrl: string; resolution?: string }[];
   aspectRatio?: string;
   outputSize?: string;
 };
@@ -42,18 +45,36 @@ async function callGemini(body: Body) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
 
-  const image = extractBase64Data(body.imageDataUrl);
-  const contents = [
-    {
-      role: "user",
-      parts: [
-        { text: body.prompt },
-        ...(image ? [{ inlineData: { mimeType: image.mimeType, data: image.data } }] : []),
-      ],
-    },
-  ];
+  const primaryImage = extractBase64Data(body.imageDataUrl);
+  const referenceImage = body.useReferenceImage ? extractBase64Data(body.referenceImageDataUrl) : null;
+  const multiSourceImages = (body.sourceImages || [])
+    .slice(0, 4)
+    .map((img) => ({ name: img.name, parsed: extractBase64Data(img.dataUrl) }))
+    .filter((x) => x.parsed);
 
-  const model = body.model || "gemini-3-flash-preview";
+  const parts: any[] = [{ text: body.prompt }];
+
+  if (primaryImage) {
+    parts.push({ text: "Primary product image:" });
+    parts.push({ inlineData: { mimeType: primaryImage.mimeType, data: primaryImage.data } });
+  }
+
+  if (multiSourceImages.length) {
+    parts.push({ text: `Additional source images (${multiSourceImages.length}) for combination/composition guidance:` });
+    for (const item of multiSourceImages) {
+      parts.push({ text: `Source image: ${item.name}` });
+      parts.push({ inlineData: { mimeType: item.parsed!.mimeType, data: item.parsed!.data } });
+    }
+  }
+
+  if (referenceImage) {
+    parts.push({ text: "Reference image for optional structure/style guidance only:" });
+    parts.push({ inlineData: { mimeType: referenceImage.mimeType, data: referenceImage.data } });
+  }
+
+  const contents = [{ role: "user", parts }];
+
+  const model = body.model || "gemini-3.1-flash-image-preview";
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -75,46 +96,32 @@ async function callOpenAI(body: Body) {
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
 
   const model = body.model || "gpt-4.1-mini";
-  const input = [
-    {
-      role: "user",
-      content: [
-        { type: "input_text", text: body.prompt },
-        ...(body.imageDataUrl ? [{ type: "input_image", image_url: body.imageDataUrl }] : []),
-      ],
-    },
-  ];
+  const content: any[] = [{ type: "input_text", text: body.prompt }];
+  if (body.imageDataUrl) content.push({ type: "input_image", image_url: body.imageDataUrl });
+  for (const img of (body.sourceImages || []).slice(0, 4)) {
+    content.push({ type: "input_image", image_url: img.dataUrl });
+  }
+  if (body.useReferenceImage && body.referenceImageDataUrl) {
+    content.push({ type: "input_image", image_url: body.referenceImageDataUrl });
+  }
 
+  const input = [{ role: "user", content }];
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ model, input }),
   });
 
   const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json?.error?.message || "OpenAI request failed.");
-  }
-
-  const outputText = (json?.output || [])
-    .flatMap((item: { content?: Array<{ text?: string }> }) => item.content || [])
-    .map((part: { text?: string }) => part.text)
-    .filter(Boolean)
-    .join("\n") || "OpenAI response received, but no direct image payload was returned by this route.";
-
+  if (!res.ok) throw new Error(json?.error?.message || "OpenAI request failed.");
+  const outputText = (json?.output || []).flatMap((item: { content?: Array<{ text?: string }> }) => item.content || []).map((part: { text?: string }) => part.text).filter(Boolean).join("\n") || "OpenAI response received, but no direct image payload was returned by this route.";
   return { provider: "openai", model, text: outputText, images: [], raw: json };
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Body;
-    if (!body.prompt?.trim()) {
-      return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
-    }
-
+    if (!body.prompt?.trim()) return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
     const configured = getAvailableProviders();
     if (body.provider === "gemini") {
       if (!configured.gemini) return NextResponse.json({ error: "Gemini is not configured on the server." }, { status: 400 });
@@ -124,7 +131,6 @@ export async function POST(req: NextRequest) {
       if (!configured.openai) return NextResponse.json({ error: "OpenAI is not configured on the server." }, { status: 400 });
       return NextResponse.json(await callOpenAI(body));
     }
-
     return NextResponse.json({ error: "Unsupported provider." }, { status: 400 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error." }, { status: 500 });

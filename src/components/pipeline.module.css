@@ -20,4 +20,11 @@
 .chip { border-radius:999px; background:#eff6ff; color:#1d4ed8; padding:8px 10px; font-size:12px; font-weight:700; }
 .hint { color:#64748b; font-size:13px; line-height:1.6; margin-top:8px; }
 .heroPanel { border:1px solid #dbe4ff; border-radius:24px; padding:20px; background:linear-gradient(135deg,#ffffff 0%,#eef4ff 100%); box-shadow:0 18px 60px rgba(37,99,235,0.08); }
-@media (max-width:900px){ .previewBox,.kv,.analysisGrid { grid-template-columns:1fr; } }
+.summaryGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.summaryCard { border:1px solid #dbe4ff; background:#fff; border-radius:18px; padding:16px; }
+.summaryCard h4 { margin:0 0 10px; font-size:15px; }
+.miniImage { width:100%; aspect-ratio:1/1; object-fit:contain; border:1px solid #dbe4ff; border-radius:14px; background:#fff; }
+.statusOk { color:#166534; }
+.statusWarn { color:#92400e; }
+.statusBad { color:#b91c1c; }
+@media (max-width:900px){ .previewBox,.kv,.analysisGrid,.summaryGrid { grid-template-columns:1fr; } }

@@ -21,7 +21,7 @@ export default function DetailAuditPage() {
       <section className={styles.card}><ImagePreviewCard /></section>
       <section className={styles.card}>
         <h2>{locale === 'en' ? 'Editable zone audit' : '可编辑区域审核'}</h2>
-        <p className={styles.tip}>这张表的作用是：告诉系统“产品的哪些区域最重要、里面是什么、如果出错会不会影响商用，以及生成时建议怎么处理”。</p>
+        <p className={styles.tip}>这张表的作用是：告诉系统“产品的哪些区域最重要、里面有什么内容、如果出错会不会影响商用，以及生成时建议怎么处理”。如果你不确定怎么填，可以先从 logo、主标题、图标、小字、图案、外形这几类开始。</p>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>

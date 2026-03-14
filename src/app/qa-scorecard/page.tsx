@@ -25,7 +25,7 @@ export default function QaPage() {
       <section className={styles.card}><ImagePreviewCard /></section>
       <section className={styles.card}>
         <h2>{locale === 'en' ? 'Editable QA table' : '可编辑质量评分表'}</h2>
-        <p className={styles.tip}>这张表不是给你填专业术语，而是帮助你判断：这次生成图到底能不能用，哪里出了问题。</p>
+        <p className={styles.tip}>这张表不是让你填专业术语，而是帮助你判断：这次生成图到底能不能用，问题出在 logo、文字、角度、摆放，还是场景真实性。</p>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead><tr><th>检查项</th><th>分数（0-5）</th><th>备注</th></tr></thead>

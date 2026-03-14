@@ -139,10 +139,12 @@ export default function GenerationPlanPage() {
       const notes: string[] = [];
       if (returnedImages.length) notes.push(`Returned ${returnedImages.length} image result(s).`);
       else notes.push("No image payload returned; provider responded with text only.");
+      notes.push(`Requested generation count: ${requestedCount}.`);
       if (provider === "gemini" && model === "gemini-3-flash-preview") notes.push("This Gemini model often returns planning/text rather than direct image output. Prefer gemini-3.1-flash-image-preview for image generation.");
-      if (intake.sourceImages?.length) notes.push(`Used ${intake.sourceImages.length} source image(s) as true multimodal inputs to help produce one composed final image per variation.`);
+      if (intake.sourceImages?.length) notes.push(`Used ${intake.sourceImages.length} source image(s) as true multimodal inputs to help produce one composed final image per variation. This confirms the multi-source input path is active.`);
       if (intake.useReferenceImage) notes.push("Reference image was included as a true multimodal input for style / composition guidance.");
       notes.push("控制强弱说明：主图=强控制；多源图=中到强控制；参考图=中控制；场景类型/风格/摆放=中控制；产品目标占比=当前仍是弱到中等控制；角度变化=中等控制但仍依赖模型执行能力。");
+      notes.push(`产品目标占比当前值：${intake.productFrameCoverageTarget || "未填写"}%。这项目前主要通过 prompt 影响构图和镜头距离，不保证每次都严格命中。`);
       setQualityNotes(notes);
     } catch (err) {
       setErrorText(err instanceof Error ? err.message : "Unknown error");

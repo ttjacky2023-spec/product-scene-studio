@@ -12,7 +12,7 @@ export default function QaPage() {
   const setQaCell = usePipelineStore((s) => s.setQaCell);
   const hardFail = qa.some((row) => {
     const score = Number(row.score || 0);
-    return (row.category === "Logo fidelity" || row.category === "Text fidelity") && score > 0 && score < 5;
+    return (row.category === "Logo fidelity" || row.category === "Text fidelity" || row.category === "Logo 一致性" || row.category === "文字一致性") && score > 0 && score < 5;
   });
 
   return (

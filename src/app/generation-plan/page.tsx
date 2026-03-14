@@ -79,7 +79,7 @@ export default function GenerationPlanPage() {
   const promptSuggestion = useMemo(() => {
     const multiSourceInstruction = intake.sourceImages?.length ? `Use the uploaded ${intake.sourceImages.length} source images as combined product references for one final composition. ` : "";
     const referenceInstruction = intake.useReferenceImage && referenceAnalysis ? `Follow this optional reference image guidance for style and composition only: ${referenceAnalysis.structureHint} ${referenceAnalysis.styleHint} ` : "";
-    return `Create a ${intake.sceneTypes || "clean lifestyle"} product image for ${intake.intendedUse || "commerce"}. ${multiSourceInstruction}${referenceInstruction}Keep the product identity consistent. Preserve visible logo, text, and icons. Target aspect ratio ${aspect || "1:1"}. Placement preference: ${placement || "centered"}. Angle tolerance: ${intake.angleTolerance} (${intake.angleDegrees || "not specified"}). Product should occupy about ${intake.productFrameCoverageTarget || "55"}% of the final frame. Execution mode: ${executionMode}. Style: ${style}. Rebuild-sensitive zones: ${rebuildList}. Extract-safe zones: ${extractList}.`;
+    return `Create a ${intake.sceneTypes || "clean lifestyle"} product image for ${intake.intendedUse || "commerce"}. ${multiSourceInstruction}${referenceInstruction}Keep the product identity consistent. Preserve visible logo, text, and icons. Target aspect ratio ${aspect || "1:1"}. Placement preference: ${placement || "centered"}. Angle tolerance: ${intake.angleTolerance} (${intake.angleDegrees || "not specified"}). Use framing and camera distance so the product occupies about ${intake.productFrameCoverageTarget || "55"}% of the final frame. If the requested coverage is small, show more environment and make the product visibly smaller in the composition. Execution mode: ${executionMode}. Style: ${style}. Rebuild-sensitive zones: ${rebuildList}. Extract-safe zones: ${extractList}.`;
   }, [intake, executionMode, style, aspect, placement, rebuildList, extractList, referenceAnalysis]);
 
   const inputSummary = useMemo(() => {
@@ -189,7 +189,7 @@ export default function GenerationPlanPage() {
           <li><strong>{locale === "en" ? "Scene types" : "场景类型"}：</strong>{locale === "en" ? "Controls where the product appears and what environment/props exist." : "决定产品出现在哪里、周围有什么环境和道具。"}</li>
           <li><strong>{locale === "en" ? "Placement" : "摆放方式"}：</strong>{locale === "en" ? "Controls where the product sits in the frame (center, left, in-use, tabletop, etc.)." : "决定产品放在画面的哪个位置，例如居中、靠左、手持、桌面。"}</li>
           <li><strong>{locale === "en" ? "Angle" : "产品角度变化"}：</strong>{locale === "en" ? "Controls how much the product turns relative to the source view." : "决定产品相对原图改变多少角度。"}</li>
-          <li><strong>{locale === "en" ? "Coverage target" : "产品目标占比"}：</strong>{locale === "en" ? "Asks the model to make the product larger or smaller in the final frame. Current control strength is weak-to-medium." : "要求模型让产品在最终画面里更大或更小。目前属于弱到中等控制。"}</li>
+          <li><strong>{locale === "en" ? "Coverage target" : "产品目标占比"}：</strong>{locale === "en" ? "Asks the model to change framing and camera distance so the product appears larger or smaller in the final frame. Current control strength is weak-to-medium, so results still need validation." : "要求模型通过构图和镜头距离，让产品在最终画面里更大或更小。目前属于弱到中等控制，结果仍需要验证。"}</li>
           <li><strong>{locale === "en" ? "Reference image" : "参考图"}：</strong>{locale === "en" ? "Mainly affects style/composition, not the product identity itself." : "主要影响风格、构图、氛围，不是主要产品身份来源。"}</li>
           <li><strong>{locale === "en" ? "Source bundle" : "多源图"}：</strong>{locale === "en" ? "Adds extra real views/components so the model can understand more structure." : "补充更多真实视角或部件，帮助模型理解结构。"}</li>
         </ul>
@@ -203,8 +203,8 @@ export default function GenerationPlanPage() {
           <div style={{ gridColumn: "1 / -1" }}><label>{locale === "en" ? "Prompt" : "最终生成指令"}</label><textarea className={pipelineStyles.textarea} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={promptSuggestion} /><p className={styles.tip}>{locale === "en" ? "This is the final instruction sent to the model. If you leave it blank, the system will auto-compose it from your form fields." : "这是最终发给模型的指令。如果留空，系统会根据你前面填写的字段自动拼装。"}</p></div>
         </div>
         <div className={pipelineStyles.actions} style={{ marginTop: 16 }}>
-          <button className={pipelineStyles.button} onClick={runGenerate} disabled={running}>{running ? "Running…" : "Generate"}</button>
-          {resultImages.length ? <button className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={downloadAll}>Download all</button> : null}
+          <button className={pipelineStyles.button} onClick={runGenerate} disabled={running}>{running ? (locale === "en" ? "Running…" : "生成中…") : (locale === "en" ? "Generate" : "开始生成")}</button>
+          {resultImages.length ? <button className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={downloadAll}>{locale === "en" ? "Download all" : "全部下载"}</button> : null}
         </div>
         {errorText ? <p className={`${styles.tip} ${pipelineStyles.statusBad}`} style={{ marginTop: 12 }}>{errorText}</p> : null}
       </section>

@@ -37,23 +37,23 @@ const defaultIntake: IntakeData = {
 };
 
 const defaultAudit: AuditRow[] = [
-  { zone: "Logo", contains: "Main brand mark", importance: "Critical", action: "Reuse", notes: "" },
-  { zone: "Title text", contains: "Front display text", importance: "Critical", action: "Extract", notes: "" },
-  { zone: "Icons", contains: "Feature / certification icons", importance: "Important", action: "Extract", notes: "" },
-  { zone: "Fine print", contains: "Small copy blocks", importance: "Minor", action: "Rebuild", notes: "" },
-  { zone: "Pattern", contains: "Decorative texture", importance: "Important", action: "Controlled gen", notes: "" },
-  { zone: "Form", contains: "Silhouette / edges", importance: "Critical", action: "Preserve geometry", notes: "" },
+  { zone: "Logo", contains: "品牌主标识", importance: "非常重要", action: "尽量保留", notes: "" },
+  { zone: "主标题", contains: "包装正面主文字", importance: "非常重要", action: "提取增强", notes: "" },
+  { zone: "图标", contains: "功能图标 / 认证图标", importance: "重要", action: "提取增强", notes: "" },
+  { zone: "小字", contains: "说明小字 / 参数小字", importance: "次要", action: "必要时重建", notes: "" },
+  { zone: "图案", contains: "装饰纹理 / 包装图案", importance: "重要", action: "受控生成", notes: "" },
+  { zone: "外形", contains: "轮廓 / 边缘 / 结构", importance: "非常重要", action: "保持结构", notes: "" },
 ];
 
 const defaultQa: QaScore[] = [
-  { category: "Silhouette fidelity", score: "", notes: "" },
-  { category: "Logo fidelity", score: "", notes: "" },
-  { category: "Text fidelity", score: "", notes: "" },
-  { category: "Icon fidelity", score: "", notes: "" },
-  { category: "Pattern/material fidelity", score: "", notes: "" },
-  { category: "Scene realism", score: "", notes: "" },
-  { category: "Placement realism", score: "", notes: "" },
-  { category: "Lighting consistency", score: "", notes: "" },
+  { category: "外形一致性", score: "", notes: "" },
+  { category: "Logo 一致性", score: "", notes: "" },
+  { category: "文字一致性", score: "", notes: "" },
+  { category: "图标一致性", score: "", notes: "" },
+  { category: "图案与材质一致性", score: "", notes: "" },
+  { category: "场景真实性", score: "", notes: "" },
+  { category: "摆放合理性", score: "", notes: "" },
+  { category: "光影一致性", score: "", notes: "" },
 ];
 
 type PipelineState = {

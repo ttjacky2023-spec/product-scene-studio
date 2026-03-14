@@ -11,6 +11,7 @@ type Body = {
   sourceImages?: { name: string; dataUrl: string; resolution?: string }[];
   aspectRatio?: string;
   outputSize?: string;
+  generationCount?: number;
 };
 
 function extractBase64Data(dataUrl?: string) {
@@ -52,43 +53,52 @@ async function callGemini(body: Body) {
     .map((img) => ({ name: img.name, parsed: extractBase64Data(img.dataUrl) }))
     .filter((x) => x.parsed);
 
-  const parts: any[] = [{ text: body.prompt }];
+  const baseParts: any[] = [{ text: body.prompt }];
 
   if (primaryImage) {
-    parts.push({ text: "Primary product image:" });
-    parts.push({ inlineData: { mimeType: primaryImage.mimeType, data: primaryImage.data } });
+    baseParts.push({ text: "Primary product image:" });
+    baseParts.push({ inlineData: { mimeType: primaryImage.mimeType, data: primaryImage.data } });
   }
 
   if (multiSourceImages.length) {
-    parts.push({ text: `Additional source images (${multiSourceImages.length}) for combination/composition guidance:` });
+    baseParts.push({ text: `Additional source images (${multiSourceImages.length}) for combination/composition guidance. Use them together to produce ONE final composed product result:` });
     for (const item of multiSourceImages) {
-      parts.push({ text: `Source image: ${item.name}` });
-      parts.push({ inlineData: { mimeType: item.parsed!.mimeType, data: item.parsed!.data } });
+      baseParts.push({ text: `Source image: ${item.name}` });
+      baseParts.push({ inlineData: { mimeType: item.parsed!.mimeType, data: item.parsed!.data } });
     }
   }
 
   if (referenceImage) {
-    parts.push({ text: "Reference image for optional structure/style guidance only:" });
-    parts.push({ inlineData: { mimeType: referenceImage.mimeType, data: referenceImage.data } });
+    baseParts.push({ text: "Reference image for optional structure/style guidance only:" });
+    baseParts.push({ inlineData: { mimeType: referenceImage.mimeType, data: referenceImage.data } });
   }
-
-  const contents = [{ role: "user", parts }];
 
   const model = body.model || "gemini-3.1-flash-image-preview";
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents }),
-  });
+  const count = Math.max(1, Math.min(8, Number(body.generationCount || 1)));
+  const images: string[] = [];
+  const texts: string[] = [];
+  const raws: any[] = [];
 
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json?.error?.message || "Gemini request failed.");
+  for (let i = 0; i < count; i++) {
+    const parts = [...baseParts, { text: `Variation ${i + 1} of ${count}. Return one final image result for this variation.` }];
+    const contents = [{ role: "user", parts }];
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.error?.message || "Gemini request failed.");
+    }
+    raws.push(json);
+    images.push(...extractGeminiImages(json));
+    const txt = extractGeminiText(json);
+    if (txt) texts.push(txt);
   }
 
-  const images = extractGeminiImages(json);
-  const text = extractGeminiText(json) || (images.length ? "Image generation response received." : "Gemini response received.");
-  return { provider: "gemini", model, text, images, raw: json };
+  const text = texts.join("\n\n") || (images.length ? `Image generation response received (${images.length}/${count}).` : "Gemini response received.");
+  return { provider: "gemini", model, requestedCount: count, text, images, raw: raws };
 }
 
 async function callOpenAI(body: Body) {

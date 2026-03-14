@@ -17,6 +17,7 @@ type ProviderStatus = {
 type GenerateResult = {
   provider: string;
   model: string;
+  requestedCount?: number;
   text?: string;
   images?: string[];
 };
@@ -121,19 +122,26 @@ export default function GenerationPlanPage() {
           sourceImages: intake.sourceImages,
           aspectRatio: aspect,
           outputSize,
+          generationCount: Number(intake.generationCount || 1),
         }),
       });
       const json: GenerateResult & { error?: string } = await res.json();
       if (!res.ok) throw new Error(json.error || "Generation failed.");
+      const returnedImages = json.images || [];
+      const requestedCount = Number(json.requestedCount || intake.generationCount || 1);
+      if (provider === "gemini" && returnedImages.length !== requestedCount) {
+        throw new Error(`结果数量不符合要求：你要求 ${requestedCount} 张，但当前只返回 ${returnedImages.length} 张。这个结果已视为失败，请调整模型或参数后重试。`);
+      }
       setResultText(json.text || "");
-      setResultImages(json.images || []);
+      setResultImages(returnedImages);
 
       const notes: string[] = [];
-      if ((json.images || []).length) notes.push(`Returned ${json.images!.length} image result(s).`);
+      if (returnedImages.length) notes.push(`Returned ${returnedImages.length} image result(s).`);
       else notes.push("No image payload returned; provider responded with text only.");
       if (provider === "gemini" && model === "gemini-3-flash-preview") notes.push("This Gemini model often returns planning/text rather than direct image output. Prefer gemini-3.1-flash-image-preview for image generation.");
-      if (intake.sourceImages?.length) notes.push(`Used ${intake.sourceImages.length} source image(s) as true multimodal inputs.`);
-      if (intake.useReferenceImage) notes.push("Reference image was included as a true multimodal input.");
+      if (intake.sourceImages?.length) notes.push(`Used ${intake.sourceImages.length} source image(s) as true multimodal inputs to help produce one composed final image per variation.`);
+      if (intake.useReferenceImage) notes.push("Reference image was included as a true multimodal input for style / composition guidance.");
+      notes.push("控制强弱说明：主图=强控制；多源图=中到强控制；参考图=中控制；场景类型/风格/摆放=中控制；产品目标占比=当前仍是弱到中等控制；角度变化=中等控制但仍依赖模型执行能力。");
       setQualityNotes(notes);
     } catch (err) {
       setErrorText(err instanceof Error ? err.message : "Unknown error");

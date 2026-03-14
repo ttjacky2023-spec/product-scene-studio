@@ -212,6 +212,17 @@ export default function GenerationPlanPage() {
       </section>
 
       <section className={styles.card}>
+        <h2>{locale === "en" ? "Validation snapshot" : "验证摘要"}</h2>
+        <ul className={styles.list}>
+          <li>{locale === "en" ? `Requested result count: ${intake.generationCount || "—"}` : `要求生成数量：${intake.generationCount || "—"}`}</li>
+          <li>{locale === "en" ? `Returned result count: ${resultImages.length || 0}` : `实际返回数量：${resultImages.length || 0}`}</li>
+          <li>{locale === "en" ? `Multi-source input count: ${intake.sourceImages?.length || 0}` : `多源图输入数量：${intake.sourceImages?.length || 0}`}</li>
+          <li>{locale === "en" ? `Reference image: ${intake.useReferenceImage ? "enabled" : "disabled"}` : `参考图：${intake.useReferenceImage ? "已启用" : "未启用"}`}</li>
+          <li>{locale === "en" ? `Coverage target: ${intake.productFrameCoverageTarget || "—"}% (weak-to-medium control)` : `产品目标占比：${intake.productFrameCoverageTarget || "—"}%（弱到中等控制）`}</li>
+        </ul>
+      </section>
+
+      <section className={styles.card}>
         <h2>{locale === "en" ? "Result quality control" : "结果质量控制"}</h2>
         {qualityNotes.length ? <ul className={styles.list}>{qualityNotes.map((note) => <li key={note}>{note}</li>)}</ul> : <p className={`${styles.tip} ${pipelineStyles.statusWarn}`}>{locale === "en" ? "No quality notes yet. Run generation first." : "还没有质量说明，请先执行生成。"}</p>}
       </section>

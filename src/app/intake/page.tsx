@@ -189,7 +189,7 @@ export default function IntakePage() {
           {useReferenceImage ? <>
             <label>{locale === "en" ? "Upload reference image" : "上传参考图"}</label>
             <input type="file" accept="image/*" onChange={(e) => onReferenceFileChange(e.target.files?.[0] ?? null)} />
-            <p className={styles.tip}>{referenceAnalyzing ? "正在分析参考图…" : "参考图会影响最终画面的风格和构图，不是主要产品身份来源。"}</p>
+            <p className={styles.tip}>{referenceAnalyzing ? "正在分析参考图…" : "参考图会影响最终画面的风格和构图，不是主要产品身份来源。也就是说：主图决定产品是谁，参考图决定画面更像什么。"}</p>
             {watch("referenceImageDataUrl") ? <div style={{ marginTop: 16 }}><img src={watch("referenceImageDataUrl")} alt="Reference preview" className={pipelineStyles.preview} style={{ maxWidth: 300 }} /><div className={pipelineStyles.actions} style={{ marginTop: 12 }}><button type="button" className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={() => { clearReferenceImage(); setValue('referenceImageName',''); setValue('referenceImageDataUrl',''); setValue('useReferenceImage', false); }}>删除参考图</button></div></div> : null}
             {referenceAnalysis ? <div className={pipelineStyles.analysisGrid} style={{ marginTop: 16 }}>
               <div className={pipelineStyles.analysisCard}><h3>结构提示</h3><p className={styles.tip}>{referenceAnalysis.structureHint}</p></div>
@@ -275,6 +275,15 @@ export default function IntakePage() {
             <div><label>绝不能变化的元素</label><textarea {...register("mustPreserve")} placeholder="logo, critical text, icons" /><p className={styles.tip}>告诉系统哪些内容不能乱：比如 logo、文字、icon、包装主图案。</p></div>
             <div><label>保真严格度</label><select {...register("strictness")}><option>maximum preservation</option><option>balanced</option><option>concept-first</option></select><p className={styles.tip}>越偏 maximum preservation，越倾向保留产品本体与细节；越偏 concept-first，越允许模型更自由发挥。</p></div>
             <div><label>最大迭代轮数</label><select {...register("maxIterations")}><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select><p className={styles.tip}>如果结果不满意，最多允许系统反复尝试几轮。</p></div>
+          </div>
+        </section>
+
+        <section className={styles.card}>
+          <h2>三类图片分别控制什么</h2>
+          <div className={pipelineStyles.analysisGrid}>
+            <div className={pipelineStyles.analysisCard}><h3>主图</h3><p className={styles.tip}>主图是最重要的产品身份来源，决定“产品本体长什么样”。</p></div>
+            <div className={pipelineStyles.analysisCard}><h3>多源图</h3><p className={styles.tip}>多源图用来补充额外视角、额外结构、额外部件信息，帮助模型理解同一个产品的更多真实样子。</p></div>
+            <div className={pipelineStyles.analysisCard}><h3>参考图</h3><p className={styles.tip}>参考图主要控制风格、构图、氛围与环境感觉，不是主要产品身份来源。</p></div>
           </div>
         </section>
 

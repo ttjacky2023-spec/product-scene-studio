@@ -25,16 +25,16 @@ export default function QaPage() {
       <section className={styles.card}><ImagePreviewCard /></section>
       <section className={styles.card}>
         <h2>{locale === 'en' ? 'Editable QA table' : '可编辑质量评分表'}</h2>
-        <p className={styles.tip}>这张表不是让你填专业术语，而是帮助你判断：这次生成图到底能不能用，问题出在 logo、文字、角度、摆放，还是场景真实性。</p>
+        <p className={styles.tip}>{locale === "en" ? "Use this table to decide whether outputs are usable and where failures come from (logo/text/angle/placement/scene realism)." : "这张表不是让你填专业术语，而是帮助你判断：这次生成图到底能不能用，问题出在 logo、文字、角度、摆放，还是场景真实性。"}</p>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
-            <thead><tr><th>检查项</th><th>分数（0-5）</th><th>备注</th></tr></thead>
+            <thead><tr><th>{locale === "en" ? "Category" : "检查项"}</th><th>{locale === "en" ? "Score (0-5)" : "分数（0-5）"}</th><th>{locale === "en" ? "Notes" : "备注"}</th></tr></thead>
             <tbody>
               {qa.map((row, index) => (
                 <tr key={row.category}>
                   <td>{row.category}</td>
                   <td><input className={pipelineStyles.input} value={row.score} onChange={(e) => setQaCell(index, 'score', e.target.value)} placeholder="0-5" /></td>
-                  <td><textarea className={pipelineStyles.textarea} value={row.notes} onChange={(e) => setQaCell(index, 'notes', e.target.value)} placeholder="例如：logo 轻微变形；文字有错；角度不对；产品太小" /></td>
+                  <td><textarea className={pipelineStyles.textarea} value={row.notes} onChange={(e) => setQaCell(index, 'notes', e.target.value)} placeholder={locale === "en" ? "e.g. logo warped; text errors; wrong angle; product too small" : "例如：logo 轻微变形；文字有错；角度不对；产品太小"} /></td>
                 </tr>
               ))}
             </tbody>

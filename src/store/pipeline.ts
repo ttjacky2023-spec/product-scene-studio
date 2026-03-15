@@ -32,7 +32,7 @@ const defaultIntake: IntakeData = {
   useReferenceImage: false,
   referenceImageName: "",
   referenceImageDataUrl: "",
-  referenceAnalysisModel: "gemini-3-flash-preview",
+  referenceAnalysisModel: "gemini-3.1-flash-image-preview",
   sourceImages: [],
 };
 

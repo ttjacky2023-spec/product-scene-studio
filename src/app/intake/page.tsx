@@ -8,6 +8,7 @@ import styles from "../shared.module.css";
 import pipelineStyles from "@/components/pipeline.module.css";
 import { PipelineToolbar } from "@/components/PipelineToolbar";
 import { analyzeImageDataUrl } from "@/lib/analyze";
+import { MAX_IMAGE_BYTES, MAX_IMAGE_EDGE_PX, MAX_SOURCE_IMAGES, MIN_IMAGE_EDGE_PX, SUPPORTED_IMAGE_MIME_TYPES } from "@/lib/generation-validation";
 import { t } from "@/lib/i18n";
 import type { ImageAsset, IntakeData } from "@/lib/types";
 import { usePipelineStore } from "@/store/pipeline";
@@ -37,6 +38,10 @@ async function fileToDataUrl(file: File) {
   });
 }
 
+function fileSignature(file: File) {
+  return `${file.name.toLowerCase()}|${file.type}|${file.size}|${file.lastModified}`;
+}
+
 export default function IntakePage() {
   const locale = usePipelineStore((s) => s.locale);
   const text = t(locale);
@@ -52,6 +57,7 @@ export default function IntakePage() {
   const clearReferenceImage = usePipelineStore((s) => s.clearReferenceImage);
   const [analyzing, setAnalyzing] = useState(false);
   const [referenceAnalyzing, setReferenceAnalyzing] = useState(false);
+  const [multiSourceError, setMultiSourceError] = useState("");
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitSuccessful } } = useForm<IntakeData>({ resolver: zodResolver(schema), defaultValues: intake });
   const imageDataUrl = watch("imageDataUrl");
   const placementPreference = watch("placementPreference");
@@ -101,11 +107,52 @@ export default function IntakePage() {
 
   const onMultiSourceChange = async (files: FileList | null) => {
     if (!files) return;
-    const chosen = Array.from(files).slice(0, 4);
+    const allFiles = Array.from(files);
+    if (allFiles.length > MAX_SOURCE_IMAGES) {
+      setMultiSourceError(locale === "en" ? `You can upload at most ${MAX_SOURCE_IMAGES} source images.` : `最多只能上传 ${MAX_SOURCE_IMAGES} 张补充源图。`);
+      return;
+    }
+    const duplicateByName = allFiles.find((file, index) => allFiles.findIndex((f) => f.name.toLowerCase() === file.name.toLowerCase()) !== index);
+    if (duplicateByName) {
+      setMultiSourceError(locale === "en" ? "Duplicate file names detected in source images. Keep each source image name unique." : "检测到同名多源图，请确保每张补充图文件名唯一。");
+      return;
+    }
+    const duplicateBySignature = allFiles.find((file, index) => allFiles.findIndex((f) => fileSignature(f) === fileSignature(file)) !== index);
+    if (duplicateBySignature) {
+      setMultiSourceError(locale === "en" ? "Duplicate source files detected. Upload distinct image files only." : "检测到重复文件内容，请上传不同的多源图。");
+      return;
+    }
+    const invalidFile = allFiles.find((file) => !SUPPORTED_IMAGE_MIME_TYPES.includes(file.type as typeof SUPPORTED_IMAGE_MIME_TYPES[number]) || file.size > MAX_IMAGE_BYTES);
+    if (invalidFile) {
+      setMultiSourceError(locale === "en"
+        ? `Only ${SUPPORTED_IMAGE_MIME_TYPES.join(", ")} files up to ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB are accepted.`
+        : `仅支持 ${SUPPORTED_IMAGE_MIME_TYPES.join(", ")} 格式，且单张不超过 ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB。`);
+      return;
+    }
+
+    setMultiSourceError("");
+    const chosen = allFiles.slice(0, MAX_SOURCE_IMAGES);
     const assets: ImageAsset[] = [];
+    const primarySignature = imageDataUrl ? `${imageDataUrl.slice(0, 96)}|${imageDataUrl.length}` : "";
+    const referenceSignature = watch("referenceImageDataUrl") ? `${watch("referenceImageDataUrl").slice(0, 96)}|${watch("referenceImageDataUrl").length}` : "";
     for (const file of chosen) {
       const dataUrl = await fileToDataUrl(file);
       const result = await analyzeImageDataUrl(dataUrl);
+      if (result.width < MIN_IMAGE_EDGE_PX || result.height < MIN_IMAGE_EDGE_PX || result.width > MAX_IMAGE_EDGE_PX || result.height > MAX_IMAGE_EDGE_PX) {
+        setMultiSourceError(locale === "en"
+          ? `Image "${file.name}" resolution must stay within ${MIN_IMAGE_EDGE_PX}-${MAX_IMAGE_EDGE_PX}px per edge.`
+          : `图片“${file.name}”分辨率需在每边 ${MIN_IMAGE_EDGE_PX}-${MAX_IMAGE_EDGE_PX}px 范围内。`);
+        return;
+      }
+      const currentSignature = `${dataUrl.slice(0, 96)}|${dataUrl.length}`;
+      if (currentSignature === primarySignature) {
+        setMultiSourceError(locale === "en" ? `Image "${file.name}" duplicates the primary image.` : `图片“${file.name}”与主图重复，请上传不同内容。`);
+        return;
+      }
+      if (currentSignature === referenceSignature) {
+        setMultiSourceError(locale === "en" ? `Image "${file.name}" duplicates the reference image.` : `图片“${file.name}”与参考图重复，请上传不同内容。`);
+        return;
+      }
       assets.push({ name: file.name, dataUrl, resolution: `${result.width} x ${result.height}` });
     }
     setValue("sourceImages", assets, { shouldDirty: true });
@@ -158,15 +205,17 @@ export default function IntakePage() {
               <p className={styles.tip}>这项告诉系统你目前有几个真实视角。视角越多，后面让产品转角度时通常越稳定。</p>
             </div>
           </div>
-          {imageDataUrl ? <div style={{ marginTop: 16 }}><img src={imageDataUrl} alt="Preview" className={pipelineStyles.preview} style={{ maxWidth: 300 }} /><div className={pipelineStyles.actions} style={{ marginTop: 12 }}><button type="button" className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={() => { clearPrimaryImage(); setValue("imageName", ""); setValue("imageDataUrl", ""); setValue("sourceResolution", ""); setValue("productCoverage", ""); }}>删除主图</button></div></div> : null}
+          {imageDataUrl ? <div style={{ marginTop: 16 }}><img src={imageDataUrl} alt="Preview" className={pipelineStyles.preview} style={{ maxWidth: 300 }} /><div className={pipelineStyles.actions} style={{ marginTop: 12 }}><button type="button" className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={() => { clearPrimaryImage(); setValue("imageName", ""); setValue("imageDataUrl", ""); setValue("sourceResolution", ""); setValue("productCoverage", ""); }}>{locale === "en" ? "Remove primary image" : "删除主图"}</button></div></div> : null}
         </section>
 
         <section className={styles.card}>
           <h2>{locale === "en" ? "Multiple source image combination" : "多源图组合"}</h2>
           <label>{locale === "en" ? "Upload up to 4 source images" : "最多上传 4 张补充源图"}</label>
           <input type="file" accept="image/*" multiple onChange={(e) => onMultiSourceChange(e.target.files)} />
-          <p className={styles.tip}>多源图不是主图替代，而是补充信息。适合补角度、补结构、补部件，帮助模型理解“同一个产品还有哪些真实视图”。</p>
-          {sourceImages?.length ? <div className={pipelineStyles.analysisGrid} style={{ marginTop: 16 }}>{sourceImages.map((img, index) => <div key={img.name + index} className={pipelineStyles.analysisCard}><img src={img.dataUrl} alt={img.name} className={pipelineStyles.preview} /><p className={styles.tip}>{img.name} · {img.resolution}</p><div className={pipelineStyles.actions}><button type="button" className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={() => { removeSourceImage(index); setValue('sourceImages', sourceImages.filter((_, i) => i !== index), { shouldDirty: true }); }}>删除这张图</button></div></div>)}</div> : null}
+          <p className={styles.tip}>{locale === "en" ? "Source bundle images are not replacements for the primary image. Use them to add real views/components so the model can compose one consistent product." : "多源图不是主图替代，而是补充信息。适合补角度、补结构、补部件，帮助模型理解“同一个产品还有哪些真实视图”。"}</p>
+          <p className={styles.tip}>{locale === "en" ? `Validation: up to ${MAX_SOURCE_IMAGES} images, image files only, max ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB each, and no duplicate file names.` : `校验规则：最多 ${MAX_SOURCE_IMAGES} 张、仅图片格式、单张最大 ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB、文件名不可重复。`}</p>
+          {multiSourceError ? <p className={`${styles.tip} ${pipelineStyles.statusBad}`}>{multiSourceError}</p> : null}
+          {sourceImages?.length ? <div className={pipelineStyles.analysisGrid} style={{ marginTop: 16 }}>{sourceImages.map((img, index) => <div key={img.name + index} className={pipelineStyles.analysisCard}><img src={img.dataUrl} alt={img.name} className={pipelineStyles.preview} /><p className={styles.tip}>{img.name} · {img.resolution}</p><div className={pipelineStyles.actions}><button type="button" className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={() => { removeSourceImage(index); setValue('sourceImages', sourceImages.filter((_, i) => i !== index), { shouldDirty: true }); }}>{locale === "en" ? "Remove image" : "删除这张图"}</button></div></div>)}</div> : null}
         </section>
 
         <section className={styles.card}>
@@ -184,13 +233,14 @@ export default function IntakePage() {
                 <option>gemini-3-pro-image-preview</option>
               </select>
               <p className={styles.tip}>这项的目的是决定“参考图分析说明”由哪个模型来理解。后续可以继续增强成真正模型分析链路。</p>
+              <p className={styles.tip}>{locale === "en" ? "This now feeds the server-side reference analysis chain before final generation." : "该设置现在会驱动服务端参考图分析链路，再注入最终生成指令。"}</p>
             </div>
           </div>
           {useReferenceImage ? <>
             <label>{locale === "en" ? "Upload reference image" : "上传参考图"}</label>
             <input type="file" accept="image/*" onChange={(e) => onReferenceFileChange(e.target.files?.[0] ?? null)} />
             <p className={styles.tip}>{referenceAnalyzing ? "正在分析参考图…" : "参考图会影响最终画面的风格和构图，不是主要产品身份来源。也就是说：主图决定产品是谁，参考图决定画面更像什么。"}</p>
-            {watch("referenceImageDataUrl") ? <div style={{ marginTop: 16 }}><img src={watch("referenceImageDataUrl")} alt="Reference preview" className={pipelineStyles.preview} style={{ maxWidth: 300 }} /><div className={pipelineStyles.actions} style={{ marginTop: 12 }}><button type="button" className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={() => { clearReferenceImage(); setValue('referenceImageName',''); setValue('referenceImageDataUrl',''); setValue('useReferenceImage', false); }}>删除参考图</button></div></div> : null}
+            {watch("referenceImageDataUrl") ? <div style={{ marginTop: 16 }}><img src={watch("referenceImageDataUrl")} alt="Reference preview" className={pipelineStyles.preview} style={{ maxWidth: 300 }} /><div className={pipelineStyles.actions} style={{ marginTop: 12 }}><button type="button" className={`${pipelineStyles.button} ${pipelineStyles.secondary}`} onClick={() => { clearReferenceImage(); setValue('referenceImageName',''); setValue('referenceImageDataUrl',''); setValue('useReferenceImage', false); }}>{locale === "en" ? "Remove reference image" : "删除参考图"}</button></div></div> : null}
             {referenceAnalysis ? <div className={pipelineStyles.analysisGrid} style={{ marginTop: 16 }}>
               <div className={pipelineStyles.analysisCard}><h3>结构提示</h3><p className={styles.tip}>{referenceAnalysis.structureHint}</p></div>
               <div className={pipelineStyles.analysisCard}><h3>风格提示</h3><p className={styles.tip}>{referenceAnalysis.styleHint}</p></div>
